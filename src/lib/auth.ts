@@ -9,13 +9,17 @@ import { isStaff } from "@/lib/types";
 export async function getCurrentProfile(): Promise<Profile | null> {
   if (!isFirebaseConfigured()) return null;
 
-  const uid = await getSessionUid();
-  if (!uid) return null;
+  try {
+    const uid = await getSessionUid();
+    if (!uid) return null;
 
-  const snap = await adminDb().collection("profiles").doc(uid).get();
-  if (!snap.exists) return null;
+    const snap = await adminDb().collection("profiles").doc(uid).get();
+    if (!snap.exists) return null;
 
-  return mapProfile(snap.id, snap.data() as ProfileDoc);
+    return mapProfile(snap.id, snap.data() as ProfileDoc);
+  } catch {
+    return null;
+  }
 }
 
 export async function requireProfile(): Promise<Profile> {

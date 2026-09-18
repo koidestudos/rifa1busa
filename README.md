@@ -140,10 +140,12 @@ npm start
 
 1. Envie o repositório para o GitHub.
 2. Importe o projeto em [https://vercel.com/new](https://vercel.com/new).
-3. Framework: Next.js.
+3. Framework: Next.js. Node.js **22.x** (o `firebase-admin` 14 exige Node 22).
 4. Cadastre as mesmas variáveis do `.env.local`.
 5. Em **Authentication → Settings → Authorized domains**, adicione o domínio da Vercel.
 6. Faça o deploy.
+
+`NEXT_PUBLIC_PIX_KEY` e `NEXT_PUBLIC_FIREBASE_PROJECT_ID` devem ser **Config** na Vercel, não Secret. As chaves `FIREBASE_ADMIN_*` e `FIREBASE_API_KEY` ficam **Sensitive**.
 
 Depois do deploy:
 
