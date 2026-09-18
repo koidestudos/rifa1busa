@@ -18,7 +18,10 @@ export function getFirebaseApiKey() {
 }
 
 export function stripEnvQuotes(value: string) {
-  const trimmed = value.trim();
+  let trimmed = value.trim();
+  if (trimmed.startsWith("\u201c") && trimmed.endsWith("\u201d")) {
+    trimmed = trimmed.slice(1, -1).trim();
+  }
   if (
     (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
     (trimmed.startsWith("'") && trimmed.endsWith("'"))
@@ -28,11 +31,50 @@ export function stripEnvQuotes(value: string) {
   return trimmed;
 }
 
-export function normalizePrivateKey(value: string) {
-  let key = stripEnvQuotes(value).replace(/\r/g, "");
+function unescapeNewlines(value: string) {
+  let key = value.replace(/\r/g, "");
+  while (key.includes("\\\\n")) {
+    key = key.replace(/\\\\n/g, "\\n");
+  }
   while (key.includes("\\n")) {
     key = key.replace(/\\n/g, "\n");
   }
+  return key;
+}
+
+function rebuildPem(value: string) {
+  const match = value.match(
+    /-----BEGIN ([A-Z0-9 ]+)-----([\s\S]*?)-----END \1-----/,
+  );
+  if (!match) return value;
+  const type = match[1];
+  const body = match[2].replace(/[^A-Za-z0-9+/=]/g, "");
+  if (!body) return value;
+  const lines = body.match(/.{1,64}/g) ?? [body];
+  return `-----BEGIN ${type}-----\n${lines.join("\n")}\n-----END ${type}-----\n`;
+}
+
+export function normalizePrivateKey(value: string) {
+  let key = stripEnvQuotes(value);
+
+  if (key.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(key) as { private_key?: string };
+      if (parsed.private_key) key = parsed.private_key;
+    } catch {
+      // keep original string
+    }
+  }
+
+  if (!key.includes("BEGIN") && /^[A-Za-z0-9+/=\s]+$/.test(key)) {
+    try {
+      key = Buffer.from(key, "base64").toString("utf8");
+    } catch {
+      // keep original string
+    }
+  }
+
+  key = rebuildPem(unescapeNewlines(stripEnvQuotes(key)));
   if (!key.includes("-----BEGIN PRIVATE KEY-----")) {
     throw new Error("FIREBASE_ADMIN_PRIVATE_KEY inválida. Cole o PEM, sem aspas extras.");
   }

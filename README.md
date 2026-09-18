@@ -147,7 +147,7 @@ npm start
 
 `NEXT_PUBLIC_PIX_KEY` e `NEXT_PUBLIC_FIREBASE_PROJECT_ID` devem ser **Config** na Vercel, não Secret. As chaves `FIREBASE_ADMIN_*` e `FIREBASE_API_KEY` ficam **Sensitive**.
 
-Em `FIREBASE_ADMIN_PRIVATE_KEY`, cole o PEM. Pode usar `\n` no lugar das quebras de linha. **Não cole as aspas** do `.env.local`.
+Em `FIREBASE_ADMIN_PRIVATE_KEY`, cole o PEM (o bloco `BEGIN PRIVATE KEY`). Se a Vercel juntar tudo numa linha, o site reconstrói as quebras. **Não cole as aspas** do `.env.local`. Depois de mudar a variável, faça **Redeploy**.
 
 Depois do deploy:
 
