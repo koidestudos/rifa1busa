@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { FieldValue } from "firebase-admin/firestore";
 import { isFirebaseConfigured } from "@/lib/firebase/env";
 import { adminDb } from "@/lib/firebase/admin";
@@ -16,6 +16,7 @@ import { loginToEmail } from "@/lib/auth-utils";
 import { homePathForRole } from "@/lib/auth";
 import { loginSchema, passwordChangeSchema } from "@/lib/validations";
 import { mapProfile, type ProfileDoc } from "@/lib/firebase/mappers";
+import type { Profile } from "@/lib/types";
 
 export type ActionResult = { error: string } | { ok: true };
 
@@ -49,30 +50,24 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
     return { error: "Não foi possível entrar agora. Tente novamente." };
   }
 
+  let profile: Profile;
   try {
     const snap = await adminDb().collection("profiles").doc(uid).get();
     if (!snap.exists) {
       return { error: "Login ou senha inválidos. Confira seus dados e tente de novo." };
     }
 
-    const profile = mapProfile(snap.id, snap.data() as ProfileDoc);
+    profile = mapProfile(snap.id, snap.data() as ProfileDoc);
     if (!profile.is_active) {
       return { error: "Esta conta está desativada. Fale com a organização da rifa." };
     }
-
-    await createSessionCookie(uid);
-    redirect(homePathForRole(profile.role, profile.must_change_password));
   } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      "digest" in error &&
-      String((error as { digest?: string }).digest ?? "").includes("NEXT_REDIRECT")
-    ) {
-      throw error;
-    }
+    unstable_rethrow(error);
     return { error: "Não foi possível entrar agora. Tente novamente." };
   }
+
+  await createSessionCookie(uid);
+  redirect(homePathForRole(profile.role, profile.must_change_password));
 }
 
 export async function logoutAction() {
@@ -102,7 +97,8 @@ export async function changePasswordAction(formData: FormData): Promise<ActionRe
       mustChangePassword: false,
       updatedAt: FieldValue.serverTimestamp(),
     });
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
     return { error: "Não foi possível alterar a senha." };
   }
 
