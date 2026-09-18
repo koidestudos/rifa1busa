@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-navy: #0a3161;
+  --color-navy-deep: #061c3a;
+  --color-navy-mid: #123a6f;
+  --color-navy-light: #1e4e8c;
+  --color-red: #b22234;
+  --color-red-dark: #8e1b2a;
+  --color-cream: #f7f3ea;
+  --color-star: #f2e6c9;
+  --color-gold: #c9a227;
+  --color-silver: #8a93a0;
+  --color-bronze: #b87333;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-oswald), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background: #f7f3ea;
+  color: #0a3161;
+  font-family: var(--font-sans);
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+}
+
+.star-field {
+  background-color: #0a3161;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.22) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 72% 28%, rgba(255, 255, 255, 0.16) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.12) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 88% 76%, rgba(255, 255, 255, 0.18) 0 1px, transparent 1.6px);
+  background-size: 180px 180px, 220px 220px, 160px 160px, 200px 200px;
+}
+
+.flag-stripes {
+  background: repeating-linear-gradient(
+    180deg,
+    #b22234 0 10px,
+    #ffffff 10px 20px
+  );
+}
+
+.card-surface {
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 40px rgba(6, 28, 58, 0.08);
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise-in {
+  animation: rise-in 0.5s ease both;
+}
