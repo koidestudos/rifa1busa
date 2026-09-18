@@ -104,7 +104,7 @@ export async function changePasswordAction(formData: FormData): Promise<ActionRe
     return { error: "Não foi possível alterar a senha." };
   }
 
-  const snap = await adminDb().collection("profiles").doc(uid).get();
-  const profile = snap.exists ? mapProfile(snap.id, snap.data() as ProfileDoc) : null;
-  redirect(homePathForRole(profile?.role ?? "student", false));
+  revalidatePath("/painel");
+  revalidatePath("/admin");
+  redirect("/painel");
 }

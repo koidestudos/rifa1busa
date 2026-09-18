@@ -14,6 +14,7 @@ type NavbarProps = {
 export function Navbar({ profile = null }: NavbarProps) {
   const [open, setOpen] = useState(false);
   const staff = isStaff(profile?.role);
+  const showAdmin = staff && !profile?.must_change_password;
 
   const links = [
     { href: "/#premios", label: "Prêmios" },
@@ -46,7 +47,7 @@ export function Navbar({ profile = null }: NavbarProps) {
                   <UserRound className="h-4 w-4" />
                   Meu painel
                 </Link>
-                {staff ? (
+                {showAdmin ? (
                   <Link href="/admin" className="inline-flex items-center gap-1 text-sm font-semibold">
                     <Shield className="h-4 w-4" />
                     Admin
@@ -96,7 +97,7 @@ export function Navbar({ profile = null }: NavbarProps) {
                 <Link href="/painel" className="rounded-2xl px-3 py-3 font-semibold hover:bg-cream" onClick={() => setOpen(false)}>
                   Meu painel
                 </Link>
-                {staff ? (
+                {showAdmin ? (
                   <Link href="/admin" className="rounded-2xl px-3 py-3 font-semibold hover:bg-cream" onClick={() => setOpen(false)}>
                     Painel administrativo
                   </Link>
