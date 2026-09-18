@@ -11,8 +11,7 @@
     "verify:data": "node --experimental-strip-types scripts/verify-data.ts"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.116.0",
+    "firebase-admin": "^14.4.0",
     "lucide-react": "^1.47.0",
     "next": "16.3.5",
     "qrcode": "^1.5.4",

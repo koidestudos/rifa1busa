@@ -16,7 +16,6 @@ export const PIX_KEY =
 
 export const PIX_QR_IMAGE = process.env.NEXT_PUBLIC_PIX_QR_IMAGE ?? "";
 
-export const STORAGE_BUCKET = "payment-proofs";
 export const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
 export const RECEIPT_MIME_TYPES = [
   "image/jpeg",

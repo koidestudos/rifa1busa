@@ -1,6 +1,14 @@
-import { TOTAL_NUMBERS, TICKET_PRICE } from "@/lib/constants";
-import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { TOTAL_NUMBERS, TICKET_PRICE, NUMBERS_PER_STUDENT } from "@/lib/constants";
+import { isFirebaseConfigured } from "@/lib/firebase/env";
+import { adminDb } from "@/lib/firebase/admin";
+import {
+  mapNumero,
+  mapProfile,
+  mapRegistro,
+  type NumeroDoc,
+  type ProfileDoc,
+  type RegistroDoc,
+} from "@/lib/firebase/mappers";
 import type { NumberWithOwner, RaffleStats, StudentProgress } from "@/lib/types";
 import { progressPercent } from "@/lib/format";
 
@@ -12,14 +20,13 @@ const EMPTY_STATS: RaffleStats = {
 };
 
 export async function getRaffleStats(): Promise<RaffleStats> {
-  if (!isSupabaseConfigured()) return EMPTY_STATS;
+  if (!isFirebaseConfigured()) return EMPTY_STATS;
 
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.rpc("get_raffle_stats");
-    if (error || !data || typeof data !== "object") return EMPTY_STATS;
+    const snap = await adminDb().collection("stats").doc("public").get();
+    if (!snap.exists) return EMPTY_STATS;
 
-    const payload = data as {
+    const payload = snap.data() as {
       total?: number;
       sold?: number;
       available?: number;
@@ -38,112 +45,80 @@ export async function getRaffleStats(): Promise<RaffleStats> {
 }
 
 export async function getStudentNumbers(alunoId: string) {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("numeros")
-    .select("*")
-    .eq("aluno_id", alunoId)
-    .order("numero", { ascending: true });
+  const snap = await adminDb()
+    .collection("numeros")
+    .where("alunoId", "==", alunoId)
+    .get();
 
-  if (error) throw error;
-  return data ?? [];
+  return snap.docs
+    .map((doc) => mapNumero(doc.id, doc.data() as NumeroDoc))
+    .sort((a, b) => a.numero - b.numero);
 }
 
 export async function getStudentProgressList(): Promise<StudentProgress[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("student_progress")
-    .select("*")
-    .order("nome", { ascending: true });
+  const [profilesSnap, numerosSnap] = await Promise.all([
+    adminDb().collection("profiles").get(),
+    adminDb().collection("numeros").get(),
+  ]);
 
-  if (error) throw error;
+  const soldByAluno = new Map<string, { total: number; vendidos: number }>();
+  for (const doc of numerosSnap.docs) {
+    const data = doc.data() as NumeroDoc;
+    const current = soldByAluno.get(data.alunoId) ?? { total: 0, vendidos: 0 };
+    current.total += 1;
+    if (data.status === "PEGO") current.vendidos += 1;
+    soldByAluno.set(data.alunoId, current);
+  }
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    nome: row.nome,
-    login: row.login,
-    role: row.role,
-    total: row.total,
-    vendidos: row.vendidos,
-    disponiveis: row.disponiveis,
-    arrecadado: Number(row.arrecadado),
-    percentual: progressPercent(row.vendidos, row.total || 15),
-  }));
+  return profilesSnap.docs
+    .map((doc) => {
+      const profile = mapProfile(doc.id, doc.data() as ProfileDoc);
+      const counts = soldByAluno.get(profile.id) ?? {
+        total: NUMBERS_PER_STUDENT,
+        vendidos: 0,
+      };
+      const vendidos = counts.vendidos;
+      const total = counts.total || NUMBERS_PER_STUDENT;
+      return {
+        id: profile.id,
+        nome: profile.nome,
+        login: profile.login,
+        role: profile.role,
+        total,
+        vendidos,
+        disponiveis: Math.max(total - vendidos, 0),
+        arrecadado: vendidos * TICKET_PRICE,
+        percentual: progressPercent(vendidos, total),
+      };
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
-type NumeroQueryRow = {
-  id: string;
-  numero: number;
-  aluno_id: string;
-  status: "DISPONIVEL" | "PEGO";
-  created_at: string;
-  updated_at: string;
-  profiles: { nome: string; login: string } | { nome: string; login: string }[] | null;
-  registros:
-    | {
-        id: string;
-        numero_id: string;
-        aluno_id: string;
-        nome_comprador: string;
-        telefone: string;
-        comprovante_url: string;
-        valor: number;
-        status: "PEGO" | "CANCELADO";
-        created_at: string;
-        updated_at: string;
-      }
-    | {
-        id: string;
-        numero_id: string;
-        aluno_id: string;
-        nome_comprador: string;
-        telefone: string;
-        comprovante_url: string;
-        valor: number;
-        status: "PEGO" | "CANCELADO";
-        created_at: string;
-        updated_at: string;
-      }[]
-    | null;
-};
-
 export async function getAllNumbersWithOwners(): Promise<NumberWithOwner[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("numeros")
-    .select("*, profiles(nome, login), registros(*)")
-    .order("numero", { ascending: true });
+  const [numerosSnap, registrosSnap] = await Promise.all([
+    adminDb().collection("numeros").orderBy("numero", "asc").get(),
+    adminDb().collection("registros").get(),
+  ]);
 
-  if (error) throw error;
+  const registros = new Map(
+    registrosSnap.docs.map((doc) => [doc.id, mapRegistro(doc.id, doc.data() as RegistroDoc)]),
+  );
 
-  return ((data ?? []) as NumeroQueryRow[]).map((row) => {
-    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    const purchase = Array.isArray(row.registros) ? row.registros[0] : row.registros;
+  return numerosSnap.docs.map((doc) => {
+    const data = doc.data() as NumeroDoc;
+    const numero = mapNumero(doc.id, data);
     return {
-      id: row.id,
-      numero: row.numero,
-      aluno_id: row.aluno_id,
-      status: row.status,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-      aluno_nome: profile?.nome ?? "—",
-      aluno_login: profile?.login ?? "",
-      purchase: purchase
-        ? {
-            ...purchase,
-            valor: Number(purchase.valor),
-          }
-        : null,
+      ...numero,
+      aluno_nome: data.alunoNome ?? "—",
+      aluno_login: data.alunoLogin ?? "",
+      purchase: registros.get(doc.id) ?? null,
     };
   });
 }
 
 export async function getProfiles() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .order("nome", { ascending: true });
-  if (error) throw error;
-  return data ?? [];
+  const snap = await adminDb().collection("profiles").get();
+  return snap.docs
+    .map((doc) => mapProfile(doc.id, doc.data() as ProfileDoc))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }

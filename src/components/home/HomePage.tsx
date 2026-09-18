@@ -45,7 +45,7 @@ export function HomePage({
       {!configured ? (
         <div className="mx-auto max-w-4xl px-4 pt-6">
           <p className="rounded-2xl bg-gold/20 px-4 py-3 text-sm font-semibold text-navy">
-            Configure o Supabase no arquivo <code>.env.local</code> para ativar login, números e
+            Configure o Firebase no arquivo <code>.env.local</code> para ativar login, números e
             comprovantes.
           </p>
         </div>

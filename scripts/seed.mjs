@@ -1,21 +1,26 @@
 #!/usr/bin/env node
 /**
- * Cria os 29 alunos no Supabase Auth, os perfis e os 435 números.
+ * Cria os 29 alunos no Firebase Auth, os perfis no Firestore e os 435 números.
  * Uso: npm run seed
  *
  * Requer .env.local com:
- * NEXT_PUBLIC_SUPABASE_URL
- * SUPABASE_SERVICE_ROLE_KEY
+ * FIREBASE_ADMIN_PROJECT_ID (ou NEXT_PUBLIC_FIREBASE_PROJECT_ID)
+ * FIREBASE_ADMIN_CLIENT_EMAIL
+ * FIREBASE_ADMIN_PRIVATE_KEY
  *
  * Senhas iniciais ficam SOMENTE neste script, nunca no frontend.
  * No primeiro login o aluno é obrigado a trocar a senha.
  */
 
-import { createClient } from "@supabase/supabase-js";
-import { readFileSync, existsSync } from "node:fs";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const AUTH_EMAIL_DOMAIN = "alunos.rifafeiradospaises.local";
+const TOTAL_NUMBERS = 435;
+const TICKET_PRICE = 5;
 
 const STUDENTS = [
   { nome: "Ana Letícia Matos", login: "ana.leticia.matos", role: "student", start: 1, end: 15, password: "ALM#2026!01" },
@@ -91,137 +96,166 @@ function assertSeedIntegrity() {
   }
 }
 
-async function findUserIdByEmail(supabase, email) {
-  let page = 1;
-  while (page <= 20) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
-    if (error) throw error;
-    const found = data.users.find((user) => user.email === email);
-    if (found) return found.id;
-    if (data.users.length < 200) return null;
-    page += 1;
+async function findUserByEmail(auth, email) {
+  try {
+    return await auth.getUserByEmail(email);
+  } catch (error) {
+    if (error?.code === "auth/user-not-found") return null;
+    throw error;
   }
-  return null;
+}
+
+function getAdminApp() {
+  const existing = getApps()[0];
+  if (existing) return existing;
+
+  const projectId =
+    process.env.FIREBASE_ADMIN_PROJECT_ID ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const storageBucket =
+    process.env.FIREBASE_STORAGE_BUCKET ??
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ??
+    (projectId ? `${projectId}.firebasestorage.app` : undefined);
+
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error(
+      "Defina FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL e FIREBASE_ADMIN_PRIVATE_KEY no .env.local",
+    );
+  }
+
+  return initializeApp({
+    credential: cert({ projectId, clientEmail, privateKey }),
+    storageBucket,
+  });
+}
+
+async function commitChunks(db, writers) {
+  const CHUNK = 400;
+  for (let i = 0; i < writers.length; i += CHUNK) {
+    const batch = db.batch();
+    for (const write of writers.slice(i, i + CHUNK)) write(batch);
+    await batch.commit();
+  }
 }
 
 async function main() {
   loadEnvFile();
   assertSeedIntegrity();
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) {
-    throw new Error("Defina NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no .env.local");
-  }
-
-  const supabase = createClient(url, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
+  const app = getAdminApp();
+  const auth = getAuth(app);
+  const db = getFirestore(app);
   const resetPasswords = process.env.SEED_RESET_PASSWORDS === "1";
+  const now = FieldValue.serverTimestamp();
   const rows = [];
 
   for (const student of STUDENTS) {
     const email = loginToEmail(student.login);
-    let userId = null;
+    let user = await findUserByEmail(auth, email);
 
-    const created = await supabase.auth.admin.createUser({
-      email,
-      password: student.password,
-      email_confirm: true,
-      user_metadata: { nome: student.nome, login: student.login },
-      app_metadata: { role: student.role },
-    });
-
-    if (created.error) {
-      userId = await findUserIdByEmail(supabase, email);
-      if (!userId) {
-        throw new Error(`Falha ao criar ${student.login}: ${created.error.message}`);
-      }
+    if (!user) {
+      user = await auth.createUser({
+        email,
+        password: student.password,
+        displayName: student.nome,
+        emailVerified: true,
+        disabled: false,
+      });
+      console.log(`Criado: ${student.login}`);
+    } else {
       if (resetPasswords) {
-        const updated = await supabase.auth.admin.updateUserById(userId, {
+        await auth.updateUser(user.uid, {
           password: student.password,
-          email_confirm: true,
-          app_metadata: { role: student.role },
+          emailVerified: true,
+          disabled: false,
+          displayName: student.nome,
         });
-        if (updated.error) throw updated.error;
       }
       console.log(`Já existia: ${student.login}`);
-    } else {
-      userId = created.data.user.id;
-      console.log(`Criado: ${student.login}`);
     }
 
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", userId)
-      .maybeSingle();
+    await auth.setCustomUserClaims(user.uid, { role: student.role });
+    rows.push({ ...student, id: user.uid, email });
+  }
 
-    if (existingProfile) {
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
+  const profileWrites = [];
+  for (const student of rows) {
+    const ref = db.collection("profiles").doc(student.id);
+    const existing = await ref.get();
+    profileWrites.push((batch) => {
+      if (existing.exists) {
+        batch.update(ref, {
           nome: student.nome,
           login: student.login,
-          email,
+          email: student.email,
           role: student.role,
-          is_active: true,
-        })
-        .eq("id", userId);
-      if (profileError) throw profileError;
-    } else {
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: userId,
-        nome: student.nome,
-        login: student.login,
-        email,
-        role: student.role,
-        must_change_password: true,
-        is_active: true,
-      });
-      if (profileError) throw profileError;
-    }
-
-    rows.push({ ...student, id: userId });
-  }
-
-  const payload = rows.flatMap((student) => {
-    const items = [];
-    for (let numero = student.start; numero <= student.end; numero += 1) {
-      items.push({
-        numero,
-        aluno_id: student.id,
-        status: "DISPONIVEL",
-      });
-    }
-    return items;
-  });
-
-  for (let i = 0; i < payload.length; i += 100) {
-    const chunk = payload.slice(i, i + 100);
-    const { error } = await supabase.from("numeros").upsert(chunk, {
-      onConflict: "numero",
-      ignoreDuplicates: true,
+          isActive: true,
+          updatedAt: now,
+        });
+      } else {
+        batch.set(ref, {
+          nome: student.nome,
+          login: student.login,
+          email: student.email,
+          role: student.role,
+          mustChangePassword: true,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
     });
-    if (error) throw error;
+  }
+  await commitChunks(db, profileWrites);
+
+  const existingNumbers = await db.collection("numeros").get();
+  const existingIds = new Set(existingNumbers.docs.map((doc) => doc.id));
+  const numberWrites = [];
+
+  for (const student of rows) {
+    for (let numero = student.start; numero <= student.end; numero += 1) {
+      const id = String(numero);
+      if (existingIds.has(id)) continue;
+      const ref = db.collection("numeros").doc(id);
+      numberWrites.push((batch) => {
+        batch.set(ref, {
+          numero,
+          alunoId: student.id,
+          alunoNome: student.nome,
+          alunoLogin: student.login,
+          status: "DISPONIVEL",
+          createdAt: now,
+          updatedAt: now,
+        });
+      });
+    }
+  }
+  await commitChunks(db, numberWrites);
+
+  const numerosSnap = await db.collection("numeros").get();
+  if (numerosSnap.size !== TOTAL_NUMBERS) {
+    throw new Error(`Esperado 435 números, encontrado ${numerosSnap.size}`);
   }
 
-  const { count: numberCount, error: countError } = await supabase
-    .from("numeros")
-    .select("*", { count: "exact", head: true });
-  if (countError) throw countError;
-  if (numberCount !== 435) {
-    throw new Error(`Esperado 435 números, encontrado ${numberCount}`);
-  }
+  const sold = numerosSnap.docs.filter((doc) => doc.data().status === "PEGO").length;
+  await db
+    .collection("stats")
+    .doc("public")
+    .set(
+      {
+        total: TOTAL_NUMBERS,
+        sold,
+        available: TOTAL_NUMBERS - sold,
+        raised: sold * TICKET_PRICE,
+        updatedAt: now,
+      },
+      { merge: true },
+    );
 
-  const { data: euller, error: eullerError } = await supabase
-    .from("profiles")
-    .select("nome, role")
-    .eq("login", "euller.pedro")
-    .maybeSingle();
-  if (eullerError) throw eullerError;
-  if (!euller || euller.role !== "super_admin") {
+  const euller = rows.find((row) => row.login === "euller.pedro");
+  const eullerSnap = euller ? await db.collection("profiles").doc(euller.id).get() : null;
+  if (!eullerSnap?.exists || eullerSnap.data()?.role !== "super_admin") {
     throw new Error("Euller Pedro não está como SUPER ADMIN");
   }
 

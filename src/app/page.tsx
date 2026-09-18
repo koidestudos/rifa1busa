@@ -1,6 +1,6 @@
 import { getCurrentProfile } from "@/lib/auth";
 import { getRaffleStats } from "@/lib/queries";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isFirebaseConfigured } from "@/lib/firebase/env";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { HomePage } from "@/components/home/HomePage";
 
@@ -14,7 +14,7 @@ export default async function Page() {
 
   return (
     <SiteShell profile={profile}>
-      <HomePage stats={stats} configured={isSupabaseConfigured()} />
+      <HomePage stats={stats} configured={isFirebaseConfigured()} />
     </SiteShell>
   );
 }

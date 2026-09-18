@@ -1,8 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { STORAGE_BUCKET } from "@/lib/constants";
+import { getCurrentProfile } from "@/lib/auth";
+import { raffleErrorMessage } from "@/lib/firebase/errors";
+import { claimNumber } from "@/lib/firebase/raffle";
+import { STORAGE_PREFIX } from "@/lib/firebase/env";
+import {
+  deleteReceipt,
+  receiptObjectPath,
+  signedReceiptUrl,
+  uploadReceipt,
+} from "@/lib/firebase/storage";
 import { onlyDigits } from "@/lib/format";
 import { isStaff } from "@/lib/types";
 import { buyerSchema, validateReceiptFile } from "@/lib/validations";
@@ -38,68 +46,37 @@ export async function registerNumberAction(
     return { error: fileError ?? "Envie o comprovante de pagamento." };
   }
 
-  const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getClaims();
-  const userId = claimsData?.claims?.sub;
-  if (!userId) {
+  const profile = await getCurrentProfile();
+  if (!profile) {
     return { error: "Sessão expirada. Entre novamente." };
   }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, role, is_active")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (!profile?.is_active) {
+  if (!profile.is_active) {
     return { error: "Conta inativa." };
   }
 
-  const { data: numero, error: numeroError } = await supabase
-    .from("numeros")
-    .select("id, numero, aluno_id, status")
-    .eq("id", numeroId)
-    .maybeSingle();
-
-  if (numeroError || !numero) {
-    return { error: "Número não encontrado." };
-  }
-
-  if (numero.aluno_id !== userId && !isStaff(profile.role)) {
-    return { error: "Você só pode registrar os seus números." };
-  }
-
-  if (numero.status !== "DISPONIVEL") {
-    return { error: "Este número já está PEGO." };
-  }
-
-  const path = `${userId}/${numero.id}/${crypto.randomUUID()}.${receiptExtension(receipt)}`;
+  const path = receiptObjectPath(profile.id, numeroId, receiptExtension(receipt));
   const bytes = new Uint8Array(await receipt.arrayBuffer());
 
-  const { error: uploadError } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(path, bytes, {
-      contentType: receipt.type || "image/jpeg",
-      upsert: false,
-    });
-
-  if (uploadError) {
+  try {
+    await uploadReceipt(path, bytes, receipt.type || "image/jpeg");
+  } catch {
     return { error: "Não foi possível enviar o comprovante. Tente novamente." };
   }
 
-  const { data, error } = await supabase.rpc("register_raffle_number", {
-    p_numero_id: numero.id,
-    p_nome_comprador: parsed.data.nome,
-    p_telefone: onlyDigits(parsed.data.telefone),
-    p_comprovante_path: path,
-  });
-
-  if (error) {
-    await supabase.storage.from(STORAGE_BUCKET).remove([path]).catch(() => undefined);
-    return { error: error.message ?? "Não foi possível registrar o número." };
+  try {
+    await claimNumber({
+      numeroId,
+      actorUid: profile.id,
+      actorIsStaff: isStaff(profile.role),
+      nomeComprador: parsed.data.nome,
+      telefone: onlyDigits(parsed.data.telefone),
+      comprovantePath: path,
+    });
+  } catch (error) {
+    await deleteReceipt(path).catch(() => undefined);
+    return { error: raffleErrorMessage(error, "Não foi possível registrar o número.") };
   }
 
-  const payload = data as { ok?: boolean; message?: string } | null;
   revalidatePath("/painel");
   revalidatePath("/admin");
   revalidatePath("/admin/numeros");
@@ -107,7 +84,7 @@ export async function registerNumberAction(
 
   return {
     ok: true,
-    message: payload?.message ?? "Número registrado com sucesso! 🇺🇸",
+    message: "Número registrado com sucesso! 🇺🇸",
   };
 }
 
@@ -115,20 +92,23 @@ export async function getSignedReceiptUrl(
   path: string,
 ): Promise<{ url: string } | { error: string }> {
   if (!path) return { error: "Comprovante indisponível." };
-
-  const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getClaims();
-  if (!claimsData?.claims?.sub) {
-    return { error: "Sessão expirada." };
+  if (path.includes("..") || path.startsWith("/")) {
+    return { error: "Comprovante indisponível." };
   }
 
-  const { data, error } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .createSignedUrl(path, 60);
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Sessão expirada." };
 
-  if (error || !data?.signedUrl) {
+  const ownerPrefix = `${STORAGE_PREFIX}/${profile.id}/`;
+  const canRead = isStaff(profile.role) || path.startsWith(ownerPrefix);
+  if (!canRead) {
     return { error: "Você não tem permissão para ver este comprovante." };
   }
 
-  return { url: data.signedUrl };
+  try {
+    const url = await signedReceiptUrl(path);
+    return { url };
+  } catch {
+    return { error: "Você não tem permissão para ver este comprovante." };
+  }
 }

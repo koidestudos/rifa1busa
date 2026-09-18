@@ -2,18 +2,26 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { FieldValue } from "firebase-admin/firestore";
+import { isFirebaseConfigured } from "@/lib/firebase/env";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import {
+  clearSessionCookie,
+  createSessionCookie,
+  getSessionUid,
+  signInWithPassword,
+} from "@/lib/firebase/session";
 import { loginToEmail } from "@/lib/auth-utils";
 import { homePathForRole } from "@/lib/auth";
 import { loginSchema, passwordChangeSchema } from "@/lib/validations";
+import { mapProfile, type ProfileDoc } from "@/lib/firebase/mappers";
 
 export type ActionResult = { error: string } | { ok: true };
 
 export async function loginAction(formData: FormData): Promise<ActionResult> {
-  if (!isSupabaseConfigured()) {
+  if (!isFirebaseConfigured()) {
     return {
-      error: "O Supabase ainda não está configurado. Siga o README para ligar o projeto.",
+      error: "O Firebase ainda não está configurado. Siga o README para ligar o projeto.",
     };
   }
 
@@ -26,41 +34,38 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
   }
 
-  const supabase = await createClient();
-  const email = loginToEmail(parsed.data.login);
+  let idToken = "";
+  let uid = "";
+  try {
+    const session = await signInWithPassword(
+      loginToEmail(parsed.data.login),
+      parsed.data.password,
+    );
+    idToken = session.idToken;
+    uid = session.uid;
+  } catch (error) {
+    if (error instanceof Error && error.message === "invalid-credentials") {
+      return { error: "Login ou senha inválidos. Confira seus dados e tente de novo." };
+    }
+    return { error: "Não foi possível entrar agora. Tente novamente." };
+  }
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password: parsed.data.password,
-  });
-
-  if (error) {
+  const snap = await adminDb().collection("profiles").doc(uid).get();
+  if (!snap.exists) {
     return { error: "Login ou senha inválidos. Confira seus dados e tente de novo." };
   }
 
-  const { data: claimsData } = await supabase.auth.getClaims();
-  const userId = claimsData?.claims?.sub;
-  if (!userId) {
-    return { error: "Não foi possível validar a sessão. Tente novamente." };
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, must_change_password, is_active")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (!profile || !profile.is_active) {
-    await supabase.auth.signOut();
+  const profile = mapProfile(snap.id, snap.data() as ProfileDoc);
+  if (!profile.is_active) {
     return { error: "Esta conta está desativada. Fale com a organização da rifa." };
   }
 
+  await createSessionCookie(idToken);
   redirect(homePathForRole(profile.role, profile.must_change_password));
 }
 
 export async function logoutAction() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  await clearSessionCookie();
   revalidatePath("/", "layout");
   redirect("/");
 }
@@ -75,35 +80,22 @@ export async function changePasswordAction(formData: FormData): Promise<ActionRe
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
   }
 
-  const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getClaims();
-  const userId = claimsData?.claims?.sub;
-  if (!userId) {
+  const uid = await getSessionUid();
+  if (!uid) {
     return { error: "Sessão expirada. Entre novamente." };
   }
 
-  const { error } = await supabase.auth.updateUser({
-    password: parsed.data.password,
-  });
-
-  if (error) {
-    return { error: error.message ?? "Não foi possível alterar a senha." };
+  try {
+    await adminAuth().updateUser(uid, { password: parsed.data.password });
+    await adminDb().collection("profiles").doc(uid).update({
+      mustChangePassword: false,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  } catch {
+    return { error: "Não foi possível alterar a senha." };
   }
 
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({ must_change_password: false })
-    .eq("id", userId);
-
-  if (profileError) {
-    return { error: "Senha alterada, mas não foi possível atualizar o perfil. Recarregue a página." };
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, must_change_password")
-    .eq("id", userId)
-    .maybeSingle();
-
+  const snap = await adminDb().collection("profiles").doc(uid).get();
+  const profile = snap.exists ? mapProfile(snap.id, snap.data() as ProfileDoc) : null;
   redirect(homePathForRole(profile?.role ?? "student", false));
 }
