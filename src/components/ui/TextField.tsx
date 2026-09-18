@@ -10,7 +10,7 @@ export function TextField({ label, error, id, className = "", ...props }: TextFi
       <span className="mb-1.5 block text-sm font-semibold text-navy">{label}</span>
       <input
         id={fieldId}
-        className={`min-h-12 w-full rounded-2xl border bg-white px-4 text-base text-navy outline-none transition focus:ring-4 focus:ring-navy/10 ${
+        className={`min-h-12 w-full rounded-xl border bg-white px-4 text-base text-navy outline-none transition placeholder:text-navy/35 focus:ring-4 focus:ring-navy/10 ${
           error ? "border-red" : "border-navy/15 focus:border-navy"
         } ${className}`}
         {...props}

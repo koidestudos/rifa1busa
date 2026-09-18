@@ -10,7 +10,7 @@ export default async function PainelPage() {
   const numbers = await getStudentNumbers(profile.id);
 
   return (
-    <SiteShell profile={profile}>
+    <SiteShell profile={profile} showFooter={false}>
       <StudentDashboard profile={profile} numbers={numbers} />
     </SiteShell>
   );

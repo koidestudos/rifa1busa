@@ -13,7 +13,7 @@ export default async function Page() {
   ]);
 
   return (
-    <SiteShell profile={profile}>
+    <SiteShell profile={profile} tone="home">
       <HomePage stats={stats} configured={isFirebaseConfigured()} />
     </SiteShell>
   );

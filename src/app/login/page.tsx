@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile, homePathForRole } from "@/lib/auth";
-import { SiteShell } from "@/components/layout/SiteShell";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { PatrioticScene, UsaFlag } from "@/components/brand/Decor";
 
 export const dynamic = "force-dynamic";
 
@@ -12,19 +13,24 @@ export default async function LoginPage() {
   }
 
   return (
-    <SiteShell>
-      <main className="mx-auto flex w-full max-w-md flex-col px-4 py-10">
-        <section className="star-field rounded-3xl p-6 text-white">
-          <p className="text-3xl">🇺🇸</p>
-          <h1 className="mt-2 font-display text-3xl">Entrar na Rifa 🇺🇸</h1>
-          <p className="mt-2 text-sm text-white/75">
-            Use o login e a senha da sua turma.
-          </p>
-        </section>
-        <div className="card-surface mt-5 rounded-3xl p-5">
-          <LoginForm />
+    <PatrioticScene
+      compact
+      className="min-h-screen"
+      contentClassName="flex min-h-screen items-center justify-center px-4 py-10"
+    >
+      <div className="w-full max-w-md rounded-3xl bg-white p-6 text-navy shadow-2xl sm:p-8">
+        <div className="mb-5 text-center">
+          <UsaFlag className="mx-auto h-8 w-12" />
+          <h1 className="mt-3 font-display text-4xl tracking-[0.08em]">Entrar na Rifa</h1>
+          <p className="mt-1 text-sm font-semibold text-navy/55">Feira dos Países 2026</p>
         </div>
-      </main>
-    </SiteShell>
+        <LoginForm />
+        <p className="mt-4 text-center text-sm">
+          <Link href="/" className="font-semibold text-navy/60 underline">
+            Voltar ao início
+          </Link>
+        </p>
+      </div>
+    </PatrioticScene>
   );
 }

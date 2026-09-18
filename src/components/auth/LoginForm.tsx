@@ -27,7 +27,7 @@ export function LoginForm() {
         label="Login"
         autoComplete="username"
         required
-        placeholder="seu.login"
+        placeholder="Digite seu login"
       />
       <div>
         <TextField
@@ -36,7 +36,7 @@ export function LoginForm() {
           type={showPassword ? "text" : "password"}
           autoComplete="current-password"
           required
-          placeholder="Sua senha"
+          placeholder="Digite sua senha"
         />
         <label className="mt-2 flex min-h-11 items-center gap-2 text-sm font-semibold text-navy/80">
           <input
@@ -52,8 +52,11 @@ export function LoginForm() {
         <p className="rounded-2xl bg-red/10 px-4 py-3 text-sm font-semibold text-red">{error}</p>
       ) : null}
       <Button type="submit" className="w-full" size="xl" disabled={pending}>
-        {pending ? "Entrando..." : "ENTRAR"}
+        {pending ? "Entrando..." : "Entrar"}
       </Button>
+      <p className="text-center text-xs leading-5 text-navy/55">
+        Esqueceu sua senha? Fale com o administrador da rifa.
+      </p>
     </form>
   );
 }

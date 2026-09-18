@@ -37,16 +37,18 @@ export function AdminManagement({
 
   return (
     <section className="space-y-4">
-      <div className="card-surface rounded-3xl p-5">
-        <h2 className="font-display text-2xl">Adicionar administrador</h2>
-        <p className="mt-1 text-sm text-navy/70">
-          O aluno continua com o painel da rifa e passa a acessar o painel administrativo.
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+      <div className="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-[0_12px_30px_rgba(6,28,58,0.06)] sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex-1">
+          <h2 className="font-display text-2xl tracking-[0.08em]">Administradores</h2>
+          <p className="mt-1 text-sm text-navy/70">
+            O aluno continua com o painel da rifa e passa a acessar o painel administrativo.
+          </p>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <select
             value={selectedId}
             onChange={(event) => setSelectedId(event.target.value)}
-            className="min-h-12 rounded-2xl border border-navy/15 bg-white px-3"
+            className="min-h-12 rounded-xl border border-navy/15 bg-white px-3"
           >
             <option value="">Selecione um aluno</option>
             {students.map((student) => (
@@ -73,31 +75,53 @@ export function AdminManagement({
         </div>
       </div>
 
-      <div className="space-y-3">
-        {admins.map((admin) => (
-          <article key={admin.id} className="card-surface rounded-3xl p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-display text-xl">{admin.nome}</p>
-                <p className="text-xs font-bold uppercase tracking-wide text-navy/50">
-                  {roleLabel(admin.role)} · {admin.is_active ? "Ativo" : "Inativo"}
-                </p>
-                <p className="text-sm text-navy/60">
-                  Criado em {formatDateTime(admin.created_at)}
-                </p>
-              </div>
-              {admin.role === "admin" ? (
-                <Button variant="secondary" onClick={() => setDemote(admin)}>
-                  Remover cargo
-                </Button>
-              ) : (
-                <span className="rounded-full bg-gold/20 px-3 py-1 text-xs font-bold">
-                  Protegido
-                </span>
-              )}
-            </div>
-          </article>
-        ))}
+      <div className="overflow-hidden rounded-3xl bg-white shadow-[0_12px_30px_rgba(6,28,58,0.06)]">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-page text-left text-xs font-bold uppercase tracking-wide text-navy/50">
+              <tr>
+                <th className="px-5 py-3">Nome</th>
+                <th className="px-3 py-3">Cargo</th>
+                <th className="px-3 py-3">Criado em</th>
+                <th className="px-3 py-3">Status</th>
+                <th className="px-5 py-3 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {admins.map((admin) => (
+                <tr key={admin.id} className="border-t border-navy/5">
+                  <td className="px-5 py-3 font-semibold">{admin.nome}</td>
+                  <td className="px-3 py-3">
+                    <span
+                      className={
+                        admin.role === "super_admin"
+                          ? "rounded-full bg-gold/20 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-navy"
+                          : "rounded-full bg-navy/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-navy"
+                      }
+                    >
+                      {roleLabel(admin.role)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 text-navy/70">{formatDateTime(admin.created_at)}</td>
+                  <td className="px-3 py-3">
+                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                      {admin.is_active ? "Ativo" : "Inativo"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    {admin.role === "admin" ? (
+                      <Button size="md" variant="secondary" onClick={() => setDemote(admin)}>
+                        Remover cargo
+                      </Button>
+                    ) : (
+                      <span className="text-xs font-bold text-navy/40">Protegido</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <ConfirmDialog

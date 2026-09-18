@@ -28,45 +28,44 @@ export const RECEIPT_MIME_TYPES = [
 export const PRIZES = [
   {
     place: 1,
-    emoji: "🥇",
     title: "1º Lugar",
     description: "2 vales de rodízio de pizza",
-    accent: "gold",
+    kind: "photo",
+    image: "/premios/pizza.jpg",
   },
   {
     place: 2,
-    emoji: "🥈",
     title: "2º Lugar",
-    description: "Cesta de doces",
-    accent: "silver",
+    description: "Cesta de Doces",
+    kind: "photo",
+    image: "/premios/doces.jpg",
   },
   {
     place: 3,
-    emoji: "🥉",
     title: "3º Lugar",
     description: "Kit de cosméticos",
-    accent: "bronze",
+    kind: "photo",
+    image: "/premios/cosmeticos.jpg",
   },
   {
     place: 4,
-    emoji: "🏆",
     title: "4º Lugar",
     description: "PIX de R$ 75,00",
-    accent: "navy",
+    kind: "pix",
+    pix: "R$ 75,00",
   },
   {
     place: 5,
-    emoji: "💵",
     title: "5º Lugar",
     description: "PIX de R$ 50,00",
-    accent: "red",
+    kind: "pix",
+    pix: "R$ 50,00",
   },
 ] as const;
 
 export const HOW_TO_STEPS = [
-  "Faça login com o usuário da sua turma",
   "Escolha um número disponível",
   "Faça o PIX de R$ 5,00",
   "Envie o comprovante",
-  "Seu número será registrado como PEGO",
+  "Seu número será registrado",
 ] as const;

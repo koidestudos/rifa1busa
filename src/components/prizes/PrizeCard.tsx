@@ -1,13 +1,5 @@
+import Image from "next/image";
 import { PRIZES } from "@/lib/constants";
-import { cn } from "@/lib/cn";
-
-const accents: Record<string, string> = {
-  gold: "border-l-gold border-t-gold",
-  silver: "border-l-silver border-t-silver",
-  bronze: "border-l-bronze border-t-bronze",
-  navy: "border-l-navy border-t-navy",
-  red: "border-l-red border-t-red",
-};
 
 export function PrizeCard({
   prize,
@@ -15,18 +7,36 @@ export function PrizeCard({
   prize: (typeof PRIZES)[number];
 }) {
   return (
-    <article
-      className={cn(
-        "card-surface rise-in overflow-hidden rounded-3xl border border-navy/10 border-l-8 border-t-4 p-5",
-        accents[prize.accent],
-      )}
-    >
-      <p className="text-3xl" aria-hidden>
-        {prize.emoji}
-      </p>
-      <h3 className="mt-3 font-display text-2xl text-navy">{prize.title}</h3>
-      <p className="mt-2 text-sm leading-6 text-navy/75">{prize.description}</p>
+    <article className="rise-in overflow-hidden rounded-2xl bg-white shadow-[0_12px_30px_rgba(6,28,58,0.1)]">
+      <div className="relative aspect-[4/3] bg-navy">
+        {prize.kind === "photo" ? (
+          <Image
+            src={prize.image}
+            alt={prize.description}
+            fill
+            sizes="(max-width: 640px) 100vw, 20vw"
+            className="object-cover"
+          />
+        ) : (
+          <PixArt amount={prize.pix} />
+        )}
+      </div>
+      <div className="px-3 py-3 text-center">
+        <h3 className="font-display text-xl tracking-[0.08em] text-navy">{prize.title}</h3>
+        <p className="mt-1 text-xs font-semibold leading-5 text-navy/70">{prize.description}</p>
+      </div>
     </article>
+  );
+}
+
+function PixArt({ amount }: { amount: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center bg-linear-to-br from-[#0a4ea1] to-[#062a5c] text-white">
+      <span className="rounded-md bg-white px-3 py-1 font-display text-2xl tracking-wide text-[#0a4ea1]">
+        PIX
+      </span>
+      <span className="mt-3 font-display text-3xl tracking-wide">{amount}</span>
+    </div>
   );
 }
 
