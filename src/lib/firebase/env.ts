@@ -17,6 +17,36 @@ export function getFirebaseApiKey() {
   return key;
 }
 
+export function stripEnvQuotes(value: string) {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+export function normalizePrivateKey(value: string) {
+  let key = stripEnvQuotes(value).replace(/\r/g, "");
+  while (key.includes("\\n")) {
+    key = key.replace(/\\n/g, "\n");
+  }
+  if (!key.includes("-----BEGIN PRIVATE KEY-----")) {
+    throw new Error("FIREBASE_ADMIN_PRIVATE_KEY inválida. Cole o PEM, sem aspas extras.");
+  }
+  return key;
+}
+
+export function getFirebasePrivateKey() {
+  const value = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+  if (!value) {
+    throw new Error("Variável de ambiente ausente: FIREBASE_ADMIN_PRIVATE_KEY");
+  }
+  return normalizePrivateKey(value);
+}
+
 export function isFirebaseConfigured() {
   return Boolean(
     getFirebaseProjectId() &&

@@ -29,7 +29,7 @@ export async function signInWithPassword(email: string, password: string) {
     ) {
       throw new Error("invalid-credentials");
     }
-    throw new Error(message ? `auth-failed:${message}` : "auth-failed");
+    throw new Error("auth-failed");
   }
 
   return { idToken: payload.idToken, uid: payload.localId };

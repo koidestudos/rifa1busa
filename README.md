@@ -147,6 +147,8 @@ npm start
 
 `NEXT_PUBLIC_PIX_KEY` e `NEXT_PUBLIC_FIREBASE_PROJECT_ID` devem ser **Config** na Vercel, não Secret. As chaves `FIREBASE_ADMIN_*` e `FIREBASE_API_KEY` ficam **Sensitive**.
 
+Em `FIREBASE_ADMIN_PRIVATE_KEY`, cole o PEM. Pode usar `\n` no lugar das quebras de linha. **Não cole as aspas** do `.env.local`.
+
 Depois do deploy:
 
 - publique regras e índices (`npx -y firebase-tools@latest deploy --only auth,firestore`)

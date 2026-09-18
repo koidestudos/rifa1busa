@@ -47,9 +47,8 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
     if (error instanceof Error && error.message === "invalid-credentials") {
       return { error: "Login ou senha inválidos. Confira seus dados e tente de novo." };
     }
-    const detail = error instanceof Error ? error.message.slice(0, 120) : "signin";
     console.error("loginAction signin", error);
-    return { error: `Não foi possível entrar agora. Tente novamente. (${detail})` };
+    return { error: "Não foi possível entrar agora. Tente novamente." };
   }
 
   let profile: Profile;
@@ -65,9 +64,8 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
     }
   } catch (error) {
     unstable_rethrow(error);
-    const detail = error instanceof Error ? error.message.slice(0, 120) : "perfil";
     console.error("loginAction profile", error);
-    return { error: `Não foi possível entrar agora. Tente novamente. (${detail})` };
+    return { error: "Não foi possível entrar agora. Tente novamente." };
   }
 
   await createSessionCookie(uid);

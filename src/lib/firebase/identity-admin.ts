@@ -1,17 +1,17 @@
 import { createHash } from "node:crypto";
 import { SignJWT, importPKCS8 } from "jose";
-import { getFirebaseProjectId } from "@/lib/firebase/env";
+import { getFirebasePrivateKey, getFirebaseProjectId, stripEnvQuotes } from "@/lib/firebase/env";
 
 function required(name: string) {
   const value = process.env[name];
   if (!value) {
     throw new Error(`Variável de ambiente ausente: ${name}`);
   }
-  return value;
+  return stripEnvQuotes(value);
 }
 
 export function getServiceAccountPrivateKey() {
-  return required("FIREBASE_ADMIN_PRIVATE_KEY").replace(/\\n/g, "\n");
+  return getFirebasePrivateKey();
 }
 
 export function getSessionSecret() {
