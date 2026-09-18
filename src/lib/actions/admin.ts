@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { requireStaff, requireSuperAdmin } from "@/lib/auth";
-import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { adminDb } from "@/lib/firebase/admin";
+import { setAuthRoleClaim } from "@/lib/firebase/identity-admin";
 import { raffleErrorMessage } from "@/lib/firebase/errors";
 import { claimNumber, deleteRegistro, releaseNumber } from "@/lib/firebase/raffle";
 import { deleteReceipt } from "@/lib/firebase/receipts";
@@ -48,7 +49,7 @@ export async function setRoleAction(
     role,
     updatedAt: FieldValue.serverTimestamp(),
   });
-  await adminAuth().setCustomUserClaims(userId, { role });
+  await setAuthRoleClaim(userId, role);
   revalidateAdmin();
   return { ok: true };
 }

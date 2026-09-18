@@ -1,5 +1,4 @@
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getFirebaseProjectId } from "@/lib/firebase/env";
 
@@ -30,10 +29,6 @@ export function getAdminApp(): App {
       privateKey,
     }),
   });
-}
-
-export function adminAuth() {
-  return getAuth(getAdminApp());
 }
 
 export function adminDb() {

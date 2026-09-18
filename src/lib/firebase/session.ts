@@ -1,6 +1,7 @@
+import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE_NAME, SESSION_MAX_MS, getFirebaseApiKey } from "@/lib/firebase/env";
-import { adminAuth } from "@/lib/firebase/admin";
+import { getSessionSecret } from "@/lib/firebase/identity-admin";
 
 type PasswordSignInResponse = {
   idToken?: string;
@@ -34,12 +35,16 @@ export async function signInWithPassword(email: string, password: string) {
   return { idToken: payload.idToken, uid: payload.localId };
 }
 
-export async function createSessionCookie(idToken: string) {
-  const session = await adminAuth().createSessionCookie(idToken, {
-    expiresIn: SESSION_MAX_MS,
-  });
+export async function createSessionCookie(uid: string) {
+  const token = await new SignJWT({ uid })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(uid)
+    .setIssuedAt()
+    .setExpirationTime(Math.floor(Date.now() / 1000) + SESSION_MAX_MS / 1000)
+    .sign(getSessionSecret());
+
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, session, {
+  cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -59,8 +64,8 @@ export async function getSessionUid() {
   if (!session) return null;
 
   try {
-    const decoded = await adminAuth().verifySessionCookie(session, true);
-    return decoded.uid;
+    const { payload } = await jwtVerify(session, getSessionSecret());
+    return typeof payload.sub === "string" && payload.sub ? payload.sub : null;
   } catch {
     return null;
   }

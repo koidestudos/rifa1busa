@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { FieldValue } from "firebase-admin/firestore";
 import { isFirebaseConfigured } from "@/lib/firebase/env";
-import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { adminDb } from "@/lib/firebase/admin";
+import { updateAuthPassword } from "@/lib/firebase/identity-admin";
 import {
   clearSessionCookie,
   createSessionCookie,
@@ -34,14 +35,12 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
   }
 
-  let idToken = "";
   let uid = "";
   try {
     const session = await signInWithPassword(
       loginToEmail(parsed.data.login),
       parsed.data.password,
     );
-    idToken = session.idToken;
     uid = session.uid;
   } catch (error) {
     if (error instanceof Error && error.message === "invalid-credentials") {
@@ -50,18 +49,30 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
     return { error: "Não foi possível entrar agora. Tente novamente." };
   }
 
-  const snap = await adminDb().collection("profiles").doc(uid).get();
-  if (!snap.exists) {
-    return { error: "Login ou senha inválidos. Confira seus dados e tente de novo." };
-  }
+  try {
+    const snap = await adminDb().collection("profiles").doc(uid).get();
+    if (!snap.exists) {
+      return { error: "Login ou senha inválidos. Confira seus dados e tente de novo." };
+    }
 
-  const profile = mapProfile(snap.id, snap.data() as ProfileDoc);
-  if (!profile.is_active) {
-    return { error: "Esta conta está desativada. Fale com a organização da rifa." };
-  }
+    const profile = mapProfile(snap.id, snap.data() as ProfileDoc);
+    if (!profile.is_active) {
+      return { error: "Esta conta está desativada. Fale com a organização da rifa." };
+    }
 
-  await createSessionCookie(idToken);
-  redirect(homePathForRole(profile.role, profile.must_change_password));
+    await createSessionCookie(uid);
+    redirect(homePathForRole(profile.role, profile.must_change_password));
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "digest" in error &&
+      String((error as { digest?: string }).digest ?? "").includes("NEXT_REDIRECT")
+    ) {
+      throw error;
+    }
+    return { error: "Não foi possível entrar agora. Tente novamente." };
+  }
 }
 
 export async function logoutAction() {
@@ -86,7 +97,7 @@ export async function changePasswordAction(formData: FormData): Promise<ActionRe
   }
 
   try {
-    await adminAuth().updateUser(uid, { password: parsed.data.password });
+    await updateAuthPassword(uid, parsed.data.password);
     await adminDb().collection("profiles").doc(uid).update({
       mustChangePassword: false,
       updatedAt: FieldValue.serverTimestamp(),
