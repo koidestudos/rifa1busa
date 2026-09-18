@@ -17,7 +17,7 @@ export function PrizeCard({
   return (
     <article
       className={cn(
-        "card-surface rise-in overflow-hidden rounded-3xl border-l-8 border-t-4 p-5",
+        "card-surface rise-in overflow-hidden rounded-3xl border border-navy/10 border-l-8 border-t-4 p-5",
         accents[prize.accent],
       )}
     >
