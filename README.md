@@ -168,7 +168,7 @@ Depois do deploy:
 
 Chave inicial: `pedroeuller367@gmail.com`
 
-O componente `PixCard` mostra um placeholder claramente identificado. Substitua pelo QR real quando tiver.
+O QR do PIX fica em `public/pix-qr.png`.
 
 ## Estrutura
 

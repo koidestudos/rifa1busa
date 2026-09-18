@@ -14,7 +14,8 @@ export const AUTH_EMAIL_DOMAIN = "alunos.rifafeiradospaises.local";
 export const PIX_KEY =
   process.env.NEXT_PUBLIC_PIX_KEY ?? "pedroeuller367@gmail.com";
 
-export const PIX_QR_IMAGE = process.env.NEXT_PUBLIC_PIX_QR_IMAGE ?? "";
+export const PIX_QR_IMAGE =
+  process.env.NEXT_PUBLIC_PIX_QR_IMAGE?.trim() || "/pix-qr.png";
 
 export const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
 export const RECEIPT_MIME_TYPES = [

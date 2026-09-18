@@ -35,10 +35,7 @@ export function PixCard({ qrDataUrl = null }: PixCardProps) {
         Escaneie o QR Code ou copie a chave PIX abaixo.
       </p>
 
-      <div className="mt-4 rounded-3xl border-2 border-dashed border-star/40 bg-white p-4 text-navy">
-        <p className="mb-3 text-center text-xs font-bold uppercase tracking-[0.2em] text-red">
-          QR Code placeholder — substitua depois pelo QR real
-        </p>
+      <div className="mt-4 rounded-3xl bg-white p-4 text-navy">
         <div className="mx-auto flex min-h-52 max-w-52 items-center justify-center rounded-2xl bg-cream">
           {imageSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -49,14 +46,10 @@ export function PixCard({ qrDataUrl = null }: PixCardProps) {
             />
           ) : (
             <div className="px-4 text-center text-sm font-semibold text-navy/60">
-              Coloque seu QR Code em <code>public/pix-qr.png</code>
+              Gerando QR Code do PIX…
             </div>
           )}
         </div>
-        <p className="mt-3 text-center text-xs text-navy/60">
-          Para usar um QR oficial, envie o arquivo para <strong>public/pix-qr.png</strong>{" "}
-          e defina <code>NEXT_PUBLIC_PIX_QR_IMAGE=/pix-qr.png</code>.
-        </p>
       </div>
 
       <div className="mt-4 rounded-2xl bg-white/10 p-4">
