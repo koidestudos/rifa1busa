@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
 import { loginAction } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
@@ -30,7 +29,7 @@ export function LoginForm() {
         required
         placeholder="seu.login"
       />
-      <div className="relative">
+      <div>
         <TextField
           name="password"
           label="Senha"
@@ -39,14 +38,15 @@ export function LoginForm() {
           required
           placeholder="Sua senha"
         />
-        <button
-          type="button"
-          className="absolute right-3 top-9 inline-flex min-h-10 min-w-10 items-center justify-center text-navy/60"
-          onClick={() => setShowPassword((value) => !value)}
-          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-        >
-          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-        </button>
+        <label className="mt-2 flex min-h-11 items-center gap-2 text-sm font-semibold text-navy/80">
+          <input
+            type="checkbox"
+            checked={showPassword}
+            onChange={(event) => setShowPassword(event.target.checked)}
+            className="h-4 w-4 accent-navy"
+          />
+          Mostrar senha
+        </label>
       </div>
       {error ? (
         <p className="rounded-2xl bg-red/10 px-4 py-3 text-sm font-semibold text-red">{error}</p>

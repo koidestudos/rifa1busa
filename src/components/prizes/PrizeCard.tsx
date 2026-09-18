@@ -2,11 +2,11 @@ import { PRIZES } from "@/lib/constants";
 import { cn } from "@/lib/cn";
 
 const accents: Record<string, string> = {
-  gold: "border-t-gold",
-  silver: "border-t-silver",
-  bronze: "border-t-bronze",
-  navy: "border-t-navy",
-  red: "border-t-red",
+  gold: "border-l-gold border-t-gold",
+  silver: "border-l-silver border-t-silver",
+  bronze: "border-l-bronze border-t-bronze",
+  navy: "border-l-navy border-t-navy",
+  red: "border-l-red border-t-red",
 };
 
 export function PrizeCard({
@@ -17,11 +17,13 @@ export function PrizeCard({
   return (
     <article
       className={cn(
-        "card-surface rise-in rounded-3xl border-t-8 p-5",
+        "card-surface rise-in overflow-hidden rounded-3xl border-l-8 border-t-4 p-5",
         accents[prize.accent],
       )}
     >
-      <p className="text-3xl">{prize.emoji}</p>
+      <p className="text-3xl" aria-hidden>
+        {prize.emoji}
+      </p>
       <h3 className="mt-3 font-display text-2xl text-navy">{prize.title}</h3>
       <p className="mt-2 text-sm leading-6 text-navy/75">{prize.description}</p>
     </article>

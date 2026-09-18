@@ -70,6 +70,7 @@ export function Navbar({ profile = null }: NavbarProps) {
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl bg-white/10 md:hidden"
             onClick={() => setOpen((value) => !value)}
             aria-label={open ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={open}
           >
             {open ? <X /> : <Menu />}
           </button>
@@ -78,13 +79,13 @@ export function Navbar({ profile = null }: NavbarProps) {
       <div className="flag-stripes h-1.5" />
 
       {open ? (
-        <div className="border-b border-navy/10 bg-navy-deep px-4 py-4 text-white md:hidden">
-          <div className="flex flex-col gap-3">
+        <div className="border-b border-navy/10 bg-white px-4 py-4 text-navy shadow-xl md:hidden">
+          <div className="flex flex-col gap-2">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="rounded-2xl px-3 py-3 text-base font-semibold hover:bg-white/10"
+                className="rounded-2xl px-3 py-3 text-base font-semibold hover:bg-cream"
                 onClick={() => setOpen(false)}
               >
                 {link.label}
@@ -92,11 +93,11 @@ export function Navbar({ profile = null }: NavbarProps) {
             ))}
             {profile ? (
               <>
-                <Link href="/painel" className="rounded-2xl px-3 py-3 font-semibold hover:bg-white/10" onClick={() => setOpen(false)}>
+                <Link href="/painel" className="rounded-2xl px-3 py-3 font-semibold hover:bg-cream" onClick={() => setOpen(false)}>
                   Meu painel
                 </Link>
                 {staff ? (
-                  <Link href="/admin" className="rounded-2xl px-3 py-3 font-semibold hover:bg-white/10" onClick={() => setOpen(false)}>
+                  <Link href="/admin" className="rounded-2xl px-3 py-3 font-semibold hover:bg-cream" onClick={() => setOpen(false)}>
                     Painel administrativo
                   </Link>
                 ) : null}
