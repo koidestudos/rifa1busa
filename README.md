@@ -8,7 +8,9 @@ Stack:
 
 - Next.js 16 (App Router) + TypeScript
 - Tailwind CSS
-- Supabase Auth, PostgreSQL e Storage
+- Firebase Authentication, Cloud Firestore e Cloud Storage
+
+O site não usa o SDK do Firebase no navegador. Login, números e comprovantes passam pelo servidor (`firebase-admin`) com cookie HTTP-only.
 
 ## 1. Instalar dependências
 
@@ -16,61 +18,55 @@ Stack:
 npm install
 ```
 
-## 2. Configurar o Supabase
+## 2. Configurar o Firebase
 
-1. Crie um projeto em [https://supabase.com](https://supabase.com).
-2. Em **Authentication → Providers → Email**, desative o cadastro público (*Enable sign ups*) para que só existam os 29 alunos criados pelo seed.
-3. Como os e-mails de login são internos (`…@alunos.rifafeiradospaises.local`), desative a confirmação obrigatória de e-mail ou confirme os usuários pelo seed (o script já marca `email_confirm: true`).
-4. Copie a URL e as chaves em **Project Settings → API**.
+1. Crie um projeto em [https://console.firebase.google.com](https://console.firebase.google.com).
+2. Ative **Authentication → Sign-in method → Email/Password**.
+3. Crie um banco **Cloud Firestore** (modo de produção; as regras do repositório bloqueiam escrita pelo cliente).
+4. Ative **Storage**.
+5. Em **Project settings → Service accounts**, gere uma chave JSON da conta de serviço.
 
-O login do site usa o **login da turma** (ex.: `euller.pedro`), não o e-mail. O sistema converte o login em um e-mail interno só para o Supabase Auth. As senhas **nunca** são salvas em texto puro: o Auth guarda o hash.
+O login do site usa o **login da turma** (ex.: `euller.pedro`), não o e-mail. O sistema converte o login em um e-mail interno (`…@alunos.rifafeiradospaises.local`) só para o Firebase Auth. As senhas **nunca** são salvas em texto puro: o Auth guarda o hash.
 
-A autorização **não** usa o e-mail do usuário. O cargo (`student`, `admin`, `super_admin`) fica na tabela `profiles` e nas políticas RLS.
+A autorização **não** usa o e-mail do usuário. O cargo (`student`, `admin`, `super_admin`) fica no documento `profiles/{uid}` e na custom claim `role` (definida só pelo Admin SDK).
 
-## 3. Como criar as tabelas
+As regras em `firestore.rules` e `storage.rules` são um protótipo para revisão: o cliente não escreve no Firestore/Storage; o servidor usa o Admin SDK depois de validar a sessão.
 
-No SQL Editor do Supabase, execute o arquivo:
+## 3. Como criar as coleções
 
-```text
-supabase/schema.sql
-```
+Não há SQL. O seed cria:
 
-Esse script cria:
+- `profiles/{uid}` — nome, login, e-mail interno, cargo, troca de senha
+- `numeros/{1..435}` — dono, status DISPONÍVEL/PEGO
+- `registros/{numero}` — 1:1 com o número (comprador, telefone, comprovante)
+- `stats/public` — totais da home (sem dados pessoais)
 
-- schema `private` com funções `SECURITY DEFINER`
-- tabelas `profiles`, `numeros` e `registros`
-- view `student_progress`
-- funções de registro, estatísticas e administração
-- Row Level Security
-- bucket `payment-proofs` (privado)
-
-## 4. Como executar as migrations
-
-Se você usa a CLI do Supabase:
+## 4. Como publicar regras e índices
 
 ```bash
-npx supabase login
-npx supabase link --project-ref SEU_PROJECT_REF
-npx supabase db push
+npx -y firebase-tools@latest login
+npx -y firebase-tools@latest use SEU_PROJECT_ID
+npx -y firebase-tools@latest deploy --only auth,firestore,storage
 ```
 
-A migration equivalente está em:
+Arquivos:
 
 ```text
-supabase/migrations/20260918120000_init.sql
+firebase.json
+firestore.rules
+firestore.indexes.json
+storage.rules
 ```
 
 ## 5. Como executar o seed
 
-O seed cria os 29 usuários no Auth, os perfis e os 435 números.
+O seed cria os 29 usuários no Auth, os perfis, os 435 números e o documento de estatísticas.
 
 ```bash
 npm run seed
 ```
 
-Requer `SUPABASE_SERVICE_ROLE_KEY` no `.env.local`.
-
-O equivalente SQL dos números (depois que os perfis existem) está em `supabase/seed.sql`.
+Requer a conta de serviço no `.env.local`.
 
 Para reaplicar as senhas iniciais (cuidado: sobrescreve senhas já trocadas):
 
@@ -86,14 +82,15 @@ Login do Kauã Miranda: `kauã.miranda` (também funciona `kaua.miranda`).
 
 ## 6. Como configurar o Storage
 
-O `schema.sql` já cria o bucket privado `payment-proofs` com RLS:
+O bucket fica privado. As regras em `storage.rules` **negam** leitura e escrita pelo cliente.
 
-- o aluno só envia arquivos na pasta do próprio `user id`
-- o aluno só lê os próprios comprovantes
-- administradores leem todos
-- o bucket **não** é público
+Comprovantes sobem só pelo Admin SDK, no caminho:
 
-Se precisar criar na interface: **Storage → New bucket → payment-proofs → Private**.
+```text
+payment-proofs/{uid}/{numeroId}/{arquivo}
+```
+
+URLs assinadas (1 minuto) são geradas no servidor para o painel admin.
 
 ## 7. Como configurar o `.env.local`
 
@@ -104,16 +101,18 @@ cp .env.example .env.local
 Preencha:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+FIREBASE_ADMIN_PROJECT_ID=
+FIREBASE_API_KEY=
+FIREBASE_ADMIN_CLIENT_EMAIL=
+FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_STORAGE_BUCKET=
 NEXT_PUBLIC_PIX_KEY=pedroeuller367@gmail.com
 NEXT_PUBLIC_PIX_QR_IMAGE=
 ```
 
-- Use a **publishable key** dos projetos novos ou a **anon key** dos projetos antigos.
-- `SUPABASE_SERVICE_ROLE_KEY` é secreta: só o script de seed usa. Nunca coloque `NEXT_PUBLIC_` nela.
+- `FIREBASE_API_KEY` é a Web API Key do projeto (login no servidor).
+- A chave da conta de serviço é secreta. Nunca use prefixo `NEXT_PUBLIC_` nela.
 - Para substituir o QR Code, coloque a imagem em `public/pix-qr.png` e defina `NEXT_PUBLIC_PIX_QR_IMAGE=/pix-qr.png`.
 
 ## 8. Como executar localmente
@@ -147,24 +146,24 @@ npm start
 1. Envie o repositório para o GitHub.
 2. Importe o projeto em [https://vercel.com/new](https://vercel.com/new).
 3. Framework: Next.js.
-4. Cadastre as mesmas variáveis do `.env.local` (exceto a `service_role`, se o seed for só local).
-5. Faça o deploy.
+4. Cadastre as mesmas variáveis do `.env.local`.
+5. Em **Authentication → Settings → Authorized domains**, adicione o domínio da Vercel.
+6. Faça o deploy.
 
 Depois do deploy:
 
-- rode o SQL (`schema.sql`) no projeto Supabase de produção
+- publique regras e índices (`firebase deploy --only auth,firestore,storage`)
 - rode `npm run seed` apontando para as credenciais de produção
-- em **Authentication → URL Configuration**, coloque o domínio da Vercel
 
-## Regras de segurança (RLS)
+## Regras de segurança
 
-- Aluno comum vê só os próprios números e comprovantes.
+- Aluno comum vê só os próprios números.
 - Aluno não acessa `/admin`.
-- Aluno não altera o próprio `role`, o dono do número nem registros de outros.
+- Aluno não altera o próprio `role`, o dono do número nem registros de outros (escritas do cliente estão bloqueadas).
 - Admin vê a rifa inteira, pode liberar números e corrigir registros.
 - Só o SUPER ADMIN promove/remove administradores.
 - Administradores comuns **não** criam outro SUPER ADMIN.
-- O registro do número usa `SELECT … FOR UPDATE` + `UPDATE … WHERE status = 'DISPONIVEL'` + unique em `numeros.numero` e `registros.numero_id`. Duas vendas do mesmo número ao mesmo tempo: só uma entra.
+- O registro do número usa transação no Firestore: status `DISPONIVEL` + documento `registros/{numero}` criado com `create`. Duas vendas do mesmo número ao mesmo tempo: só uma entra.
 
 ## PIX
 
@@ -178,7 +177,8 @@ O componente `PixCard` mostra um placeholder claramente identificado. Substitua 
 src/app              rotas (home, login, painel, admin)
 src/components       Navbar, NumberBall, PaymentModal, painéis...
 src/lib/actions      server actions (auth, registro, admin)
-src/lib/supabase     clientes SSR / browser
-supabase/schema.sql  banco, RLS, storage
+src/lib/firebase     Admin SDK, sessão, transações
+firestore.rules      regras do Firestore
+storage.rules        regras do Storage
 scripts/seed.mjs     Auth + perfis + 435 números
 ```

@@ -1,24 +1,21 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isFirebaseConfigured } from "@/lib/firebase/env";
+import { adminDb } from "@/lib/firebase/admin";
+import { getSessionUid } from "@/lib/firebase/session";
+import { mapProfile, type ProfileDoc } from "@/lib/firebase/mappers";
 import type { Profile, UserRole } from "@/lib/types";
 import { isStaff } from "@/lib/types";
 
 export async function getCurrentProfile(): Promise<Profile | null> {
-  if (!isSupabaseConfigured()) return null;
+  if (!isFirebaseConfigured()) return null;
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
-  if (error || !userId) return null;
+  const uid = await getSessionUid();
+  if (!uid) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .maybeSingle();
+  const snap = await adminDb().collection("profiles").doc(uid).get();
+  if (!snap.exists) return null;
 
-  return profile;
+  return mapProfile(snap.id, snap.data() as ProfileDoc);
 }
 
 export async function requireProfile(): Promise<Profile> {

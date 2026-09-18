@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "numeros",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "alunoId", "order": "ASCENDING" },
+        { "fieldPath": "numero", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

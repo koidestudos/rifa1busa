@@ -1,0 +1,180 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: profiles
+// Document ID: Firebase Auth uid
+// Fields:
+//   - nome: string (required, 2-80) — display name
+//   - login: string (required, 3-80) — school login
+//   - email: string (required) — synthetic Auth email (PII)
+//   - role: string enum student|admin|super_admin (immutable from client)
+//   - mustChangePassword: bool
+//   - isActive: bool
+//   - createdAt: timestamp (immutable)
+//   - updatedAt: timestamp
+//
+// Collection: numeros
+// Document ID: string of raffle number ("1"..."435")
+// Fields:
+//   - numero: number 1-435 (immutable)
+//   - alunoId: string uid (immutable)
+//   - alunoNome: string (denormalized, not buyer PII)
+//   - alunoLogin: string
+//   - status: DISPONIVEL | PEGO
+//   - createdAt: timestamp (immutable)
+//   - updatedAt: timestamp
+//
+// Collection: registros
+// Document ID: same as numero document ID (1:1 uniqueness)
+// Fields:
+//   - numeroId: string (immutable)
+//   - alunoId: string uid (immutable)
+//   - nomeComprador: string (PII)
+//   - telefone: string digits (PII)
+//   - comprovantePath: string storage path
+//   - valor: number == 5
+//   - status: PEGO | CANCELADO
+//   - createdAt: timestamp (immutable)
+//   - updatedAt: timestamp
+//
+// Collection: stats
+// Document ID: "public"
+// Fields: total, sold, available, raised, updatedAt — no PII
+// Homepage reads this via Admin SDK, not the client SDK.
+//
+// Role authority: Auth custom claim `request.auth.token.role` set only by Admin SDK.
+// All writes in this app go through firebase-admin after session checks.
+// Client writes always fail: validators run, then the extra `&& false`.
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function tokenRole() {
+      return isAuthenticated() && 'role' in request.auth.token
+        ? request.auth.token.role
+        : '';
+    }
+
+    function isStaff() {
+      return isAuthenticated() && tokenRole() in ['admin', 'super_admin'];
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && tokenRole() == 'super_admin';
+    }
+
+    function isValidProfile(data) {
+      return data.keys().hasOnly([
+          'nome', 'login', 'email', 'role', 'mustChangePassword',
+          'isActive', 'createdAt', 'updatedAt'
+        ]) &&
+        data.nome is string && data.nome.size() >= 2 && data.nome.size() <= 80 &&
+        data.login is string && data.login.size() >= 3 && data.login.size() <= 80 &&
+        data.email is string && data.email.size() <= 120 &&
+        data.role in ['student', 'admin', 'super_admin'] &&
+        data.mustChangePassword is bool &&
+        data.isActive is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidNumero(data) {
+      return data.keys().hasOnly([
+          'numero', 'alunoId', 'alunoNome', 'alunoLogin',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.numero is int && data.numero >= 1 && data.numero <= 435 &&
+        data.alunoId is string && data.alunoId.size() > 0 && data.alunoId.size() <= 128 &&
+        data.alunoNome is string && data.alunoNome.size() <= 80 &&
+        data.alunoLogin is string && data.alunoLogin.size() <= 80 &&
+        data.status in ['DISPONIVEL', 'PEGO'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidRegistro(data) {
+      return data.keys().hasOnly([
+          'numeroId', 'alunoId', 'nomeComprador', 'telefone',
+          'comprovantePath', 'valor', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.numeroId is string && data.numeroId.size() <= 8 &&
+        data.alunoId is string && data.alunoId.size() <= 128 &&
+        data.nomeComprador is string && data.nomeComprador.size() >= 3 && data.nomeComprador.size() <= 120 &&
+        data.telefone is string && data.telefone.size() >= 10 && data.telefone.size() <= 11 &&
+        data.comprovantePath is string && data.comprovantePath.size() <= 500 &&
+        data.valor is number && data.valor == 5 &&
+        data.status in ['PEGO', 'CANCELADO'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidStats(data) {
+      return data.keys().hasOnly(['total', 'sold', 'available', 'raised', 'updatedAt']) &&
+        data.total is int && data.total == 435 &&
+        data.sold is int && data.sold >= 0 && data.sold <= 435 &&
+        data.available is int && data.available >= 0 && data.available <= 435 &&
+        data.raised is number &&
+        data.updatedAt is timestamp;
+    }
+
+    match /profiles/{userId} {
+      allow read: if isOwner(userId) || isStaff();
+      allow create: if isValidProfile(request.resource.data) && false;
+      allow update: if isValidProfile(request.resource.data) &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.login == resource.data.login &&
+        false;
+      allow delete: if false;
+    }
+
+    match /numeros/{numeroId} {
+      allow read: if isStaff() ||
+        (isAuthenticated() && resource.data.alunoId == request.auth.uid);
+      allow create: if isValidNumero(request.resource.data) && false;
+      allow update: if isValidNumero(request.resource.data) &&
+        request.resource.data.numero == resource.data.numero &&
+        request.resource.data.alunoId == resource.data.alunoId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        false;
+      allow delete: if false;
+    }
+
+    match /registros/{numeroId} {
+      allow read: if isStaff() ||
+        (isAuthenticated() && resource.data.alunoId == request.auth.uid);
+      allow create: if isValidRegistro(request.resource.data) &&
+        request.resource.data.alunoId == request.auth.uid &&
+        false;
+      allow update: if isValidRegistro(request.resource.data) &&
+        request.resource.data.numeroId == resource.data.numeroId &&
+        request.resource.data.alunoId == resource.data.alunoId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        false;
+      allow delete: if false;
+    }
+
+    match /stats/{docId} {
+      allow read: if false;
+      allow create: if isValidStats(request.resource.data) && isSuperAdmin() && false;
+      allow update: if isValidStats(request.resource.data) && isSuperAdmin() && false;
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
