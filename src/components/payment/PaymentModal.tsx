@@ -65,16 +65,13 @@ export function PaymentModal({
   return (
     <div className="fixed inset-0 z-50 bg-navy-deep/70">
       <div className="h-full overflow-y-auto">
-        <div className="mx-auto min-h-full w-full max-w-lg bg-cream sm:my-6 sm:min-h-0 sm:rounded-3xl">
-          <div className="sticky top-0 z-10 flex items-center justify-between bg-navy px-4 py-4 text-white sm:rounded-t-3xl">
-            <div>
-              <p className="font-display text-2xl">Número {numero}</p>
-              <p className="text-sm text-white/75">Valor: {formatBRL(TICKET_PRICE)}</p>
-            </div>
+        <div className="mx-auto min-h-full w-full max-w-lg bg-white sm:my-6 sm:min-h-0 sm:rounded-3xl">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-navy/5 bg-white px-4 py-4 sm:rounded-t-3xl">
+            <p className="font-display text-2xl tracking-[0.08em] text-navy">Comprar número</p>
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl bg-white/10"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-navy/5"
               aria-label="Fechar"
             >
               <X />
@@ -82,11 +79,15 @@ export function PaymentModal({
           </div>
 
           <form action={onSubmit} className="space-y-5 p-4 pb-10">
-            <p className="rounded-2xl bg-white p-4 text-sm leading-6 text-navy/80">
-              Para registrar este número, faça o pagamento de {formatBRL(TICKET_PRICE)} pelo
-              PIX e envie o comprovante abaixo.
+            <div>
+              <p className="font-display text-3xl tracking-[0.06em] text-navy">Número {numero}</p>
+              <p className="text-sm font-semibold text-navy/60">Valor: {formatBRL(TICKET_PRICE)}</p>
+            </div>
+            <p className="text-sm leading-6 text-navy/70">
+              Para registrar este número, faça o pagamento de {formatBRL(TICKET_PRICE)} pelo PIX e
+              envie o comprovante abaixo.
             </p>
-            <PixCard qrDataUrl={qrDataUrl} />
+            <PixCard qrDataUrl={qrDataUrl} compact />
             <BuyerForm pending={pending} error={error} />
           </form>
         </div>

@@ -10,7 +10,6 @@ export default async function AdminsPage() {
 
   return (
     <section>
-      <h1 className="mb-4 font-display text-3xl">Gerenciar administradores</h1>
       <AdminManagement
         profiles={profiles}
         canManage={profile.role === "super_admin"}

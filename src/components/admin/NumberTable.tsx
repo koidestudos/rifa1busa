@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Search } from "lucide-react";
 import type { NumberWithOwner, Profile } from "@/lib/types";
 import { NumberBall } from "@/components/numbers/NumberBall";
+import { NumberLegend } from "@/components/numbers/NumberGrid";
 import { ReceiptViewer } from "@/components/admin/ReceiptViewer";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
@@ -15,6 +16,7 @@ import {
   releaseNumberAction,
 } from "@/lib/actions/admin";
 import { useToast } from "@/components/providers/ToastProvider";
+import { cn } from "@/lib/cn";
 
 type Filter = "TODOS" | "DISPONIVEL" | "PEGO";
 
@@ -55,30 +57,42 @@ export function NumberTable({
 
   return (
     <section className="space-y-4">
-      <div className="card-surface rounded-3xl p-4">
+      <div className="rounded-3xl bg-white p-4 shadow-[0_12px_30px_rgba(6,28,58,0.06)]">
         <label className="relative block">
           <Search className="absolute left-4 top-3.5 h-5 w-5 text-navy/40" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar número, comprador, telefone ou aluno"
-            className="min-h-12 w-full rounded-2xl border border-navy/15 bg-white pl-12 pr-4"
+            placeholder="Pesquisar número..."
+            className="min-h-12 w-full rounded-xl border border-navy/15 bg-white pl-12 pr-4"
           />
         </label>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <select
-            value={filter}
-            onChange={(event) => setFilter(event.target.value as Filter)}
-            className="min-h-12 rounded-2xl border border-navy/15 bg-white px-3"
-          >
-            <option value="TODOS">Todos</option>
-            <option value="DISPONIVEL">Disponíveis</option>
-            <option value="PEGO">Pegos</option>
-          </select>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(
+            [
+              ["TODOS", "Todos"],
+              ["DISPONIVEL", "Disponíveis"],
+              ["PEGO", "Pegos"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setFilter(value)}
+              className={cn(
+                "rounded-full px-4 py-2 text-sm font-bold",
+                filter === value ? "bg-navy text-white" : "bg-page text-navy",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
           <select
             value={alunoId}
             onChange={(event) => setAlunoId(event.target.value)}
-            className="min-h-12 rounded-2xl border border-navy/15 bg-white px-3"
+            className="min-h-12 rounded-xl border border-navy/15 bg-white px-3"
           >
             <option value="todos">Todos os alunos</option>
             {students.map((student) => (
@@ -87,24 +101,23 @@ export function NumberTable({
               </option>
             ))}
           </select>
+          <NumberLegend />
         </div>
         <p className="mt-3 text-sm font-semibold text-navy/60">
           {filtered.length} número(s) encontrados
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+      <div className="grid grid-cols-6 gap-2 rounded-3xl bg-white p-4 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12">
         {filtered.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => setSelected(item)}
-            className="rounded-2xl bg-white p-2 text-center shadow-sm"
+            className="flex justify-center"
+            aria-label={`Número ${item.numero}, ${item.aluno_nome}`}
           >
             <NumberBall numero={item.numero} status={item.status} compact />
-            <p className="mt-1 truncate text-[11px] font-semibold text-navy/60">
-              {item.aluno_nome}
-            </p>
           </button>
         ))}
       </div>
@@ -112,10 +125,10 @@ export function NumberTable({
       {selected ? (
         <div className="fixed inset-0 z-40 bg-navy-deep/50" onClick={() => setSelected(null)}>
           <div
-            className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-3xl bg-cream p-5"
+            className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-3xl bg-white p-5"
             onClick={(event) => event.stopPropagation()}
           >
-            <p className="font-display text-3xl">Número {selected.numero}</p>
+            <p className="font-display text-3xl tracking-[0.06em]">Número {selected.numero}</p>
             <p className="text-sm text-navy/70">Aluno: {selected.aluno_nome}</p>
             <p className="mt-1 text-sm font-bold">
               Status: {selected.status === "PEGO" ? "PEGO" : "DISPONÍVEL"}
@@ -125,11 +138,11 @@ export function NumberTable({
                 <>
                   <ReceiptDetailsButton item={selected} />
                   <Button variant="secondary" onClick={() => setReleaseTarget(selected)}>
-                    Liberar número / marcar disponível
+                    Marcar como disponível
                   </Button>
                   {selected.purchase ? (
                     <Button variant="danger" onClick={() => setDeleteTarget(selected)}>
-                      Excluir registro
+                      Cancelar pagamento
                     </Button>
                   ) : null}
                 </>
@@ -237,7 +250,7 @@ function ManualTakeModal({
   return (
     <div className="fixed inset-0 z-[55] flex items-end bg-navy-deep/60 p-4 sm:items-center">
       <form action={onSubmit} className="w-full max-w-md rounded-3xl bg-white p-5">
-        <h3 className="font-display text-2xl">Marcar {item.numero} como PEGO</h3>
+        <h3 className="font-display text-2xl tracking-[0.06em]">Marcar {item.numero} como PEGO</h3>
         <div className="mt-4 space-y-3">
           <TextField name="nome" label="Nome do comprador" required />
           <TextField name="telefone" label="Telefone" required placeholder="(00) 00000-0000" />

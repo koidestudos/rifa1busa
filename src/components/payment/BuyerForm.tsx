@@ -17,17 +17,17 @@ export function BuyerForm({ pending = false, error = null }: BuyerFormProps) {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-display text-2xl text-navy">Dados do comprador</h3>
+      <h3 className="font-display text-2xl tracking-[0.08em] text-navy">Dados do comprador</h3>
       <TextField
         name="nome"
         label="Nome completo"
         autoComplete="name"
         required
-        placeholder="Nome de quem comprou o número"
+        placeholder="Ex: João da Silva"
       />
       <TextField
         name="telefone"
-        label="Número de telefone"
+        label="Telefone"
         inputMode="tel"
         autoComplete="tel"
         required
@@ -39,7 +39,7 @@ export function BuyerForm({ pending = false, error = null }: BuyerFormProps) {
       <div>
         <p className="mb-1.5 text-sm font-semibold text-navy">Comprovante de pagamento</p>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-2xl border border-navy/15 bg-white px-4 font-semibold">
+          <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-full border border-navy/15 bg-white px-4 text-sm font-semibold">
             <Camera className="h-5 w-5" />
             Tirar foto
             <input
@@ -61,9 +61,9 @@ export function BuyerForm({ pending = false, error = null }: BuyerFormProps) {
               }}
             />
           </label>
-          <label className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-2xl border border-navy/15 bg-white px-4 font-semibold">
+          <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-full border border-navy/15 bg-white px-4 text-sm font-semibold">
             <ImagePlus className="h-5 w-5" />
-            Enviar imagem
+            Enviar arquivo
             <input
               type="file"
               name="comprovante"
@@ -73,7 +73,7 @@ export function BuyerForm({ pending = false, error = null }: BuyerFormProps) {
             />
           </label>
         </div>
-        <p className="mt-2 text-xs text-navy/60">JPG, JPEG, PNG ou WebP · até 8 MB</p>
+        <p className="mt-2 text-xs text-navy/60">JPG, JPEG, PNG, WebP</p>
         {fileName ? (
           <p className="mt-1 text-sm font-semibold text-navy">Arquivo: {fileName}</p>
         ) : null}
@@ -84,7 +84,7 @@ export function BuyerForm({ pending = false, error = null }: BuyerFormProps) {
       ) : null}
 
       <Button type="submit" className="w-full" size="xl" disabled={pending}>
-        {pending ? "Enviando comprovante..." : "REGISTRAR NÚMERO"}
+        {pending ? "Enviando comprovante..." : "Registrar número"}
       </Button>
     </div>
   );

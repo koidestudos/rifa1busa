@@ -2,18 +2,21 @@
 
 @theme inline {
   --color-navy: #0a3161;
-  --color-navy-deep: #061c3a;
+  --color-navy-deep: #061428;
   --color-navy-mid: #123a6f;
   --color-navy-light: #1e4e8c;
-  --color-red: #b22234;
-  --color-red-dark: #8e1b2a;
+  --color-ball: #1e5aa8;
+  --color-ball-taken: #e11d2e;
+  --color-red: #bf0a30;
+  --color-red-dark: #9b0826;
   --color-cream: #f7f3ea;
+  --color-page: #eef3f9;
   --color-star: #f2e6c9;
-  --color-gold: #c9a227;
+  --color-gold: #d4a017;
   --color-silver: #8a93a0;
   --color-bronze: #b87333;
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-oswald), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bebas), var(--font-oswald), ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
@@ -22,14 +25,32 @@ html {
 
 body {
   min-height: 100vh;
-  background: #f7f3ea;
+  background: #eef3f9;
   color: #0a3161;
   font-family: var(--font-sans);
 }
 
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+}
+
+.hero-eua {
+  background-color: #061428;
+  background-image:
+    linear-gradient(180deg, rgba(6, 20, 40, 0.72) 0%, rgba(10, 49, 97, 0.42) 42%, rgba(6, 20, 40, 0.88) 100%),
+    url("/brand/hero-eua.jpg");
+  background-size: cover;
+  background-position: center 28%;
+}
+
+.hero-stripes {
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(191, 10, 48, 0.28) 0 14px,
+    rgba(255, 255, 255, 0.12) 14px 28px
+  );
+  mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
 }
 
 .star-field {
@@ -45,14 +66,38 @@ body {
 .flag-stripes {
   background: repeating-linear-gradient(
     180deg,
-    #b22234 0 10px,
-    #ffffff 10px 20px
+    #bf0a30 0 5px,
+    #ffffff 5px 10px
   );
 }
 
+.usa-flag {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+  background: repeating-linear-gradient(
+    180deg,
+    #bf0a30 0 7.69%,
+    #ffffff 7.69% 15.38%
+  );
+}
+
+.usa-flag::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 40%;
+  height: 53.85%;
+  background:
+    radial-gradient(circle, #fff 0.7px, transparent 1px) 0 0 / 4px 4px,
+    #3c3b6e;
+}
+
 .card-surface {
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 40px rgba(6, 28, 58, 0.08);
+  background: #ffffff;
+  box-shadow: 0 14px 40px rgba(6, 28, 58, 0.08);
 }
 
 @keyframes rise-in {

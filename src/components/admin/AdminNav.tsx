@@ -5,15 +5,15 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 
 const links = [
-  { href: "/admin", label: "Visão geral" },
-  { href: "/admin/numeros", label: "Controle da rifa" },
+  { href: "/admin", label: "Dashboard" },
+  { href: "/admin/numeros", label: "Números" },
   { href: "/admin/administradores", label: "Administradores" },
 ];
 
 export function AdminNav() {
   const pathname = usePathname();
   return (
-    <nav className="flex gap-2 overflow-x-auto pb-1">
+    <nav className="hidden gap-2 overflow-x-auto pb-1 md:flex">
       {links.map((link) => {
         const active = pathname === link.href;
         return (
@@ -22,7 +22,7 @@ export function AdminNav() {
             href={link.href}
             className={cn(
               "shrink-0 rounded-full px-4 py-2 text-sm font-bold",
-              active ? "bg-red text-white" : "bg-white text-navy",
+              active ? "bg-red text-white" : "bg-white text-navy shadow-sm",
             )}
           >
             {link.label}
