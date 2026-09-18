@@ -113,10 +113,6 @@ function getAdminApp() {
     process.env.FIREBASE_ADMIN_PROJECT_ID ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n");
-  const storageBucket =
-    process.env.FIREBASE_STORAGE_BUCKET ??
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ??
-    (projectId ? `${projectId}.firebasestorage.app` : undefined);
 
   if (!projectId || !clientEmail || !privateKey) {
     throw new Error(
@@ -126,7 +122,6 @@ function getAdminApp() {
 
   return initializeApp({
     credential: cert({ projectId, clientEmail, privateKey }),
-    storageBucket,
   });
 }
 

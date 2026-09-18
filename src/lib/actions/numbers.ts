@@ -4,13 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/auth";
 import { raffleErrorMessage } from "@/lib/firebase/errors";
 import { claimNumber } from "@/lib/firebase/raffle";
-import { STORAGE_PREFIX } from "@/lib/firebase/env";
-import {
-  deleteReceipt,
-  receiptObjectPath,
-  signedReceiptUrl,
-  uploadReceipt,
-} from "@/lib/firebase/storage";
+import { RECEIPT_MARKER, deleteReceipt, saveReceipt } from "@/lib/firebase/receipts";
 import { onlyDigits } from "@/lib/format";
 import { isStaff } from "@/lib/types";
 import { buyerSchema, validateReceiptFile } from "@/lib/validations";
@@ -18,13 +12,6 @@ import { buyerSchema, validateReceiptFile } from "@/lib/validations";
 export type RegisterResult =
   | { ok: true; message: string }
   | { error: string };
-
-function receiptExtension(file: File) {
-  const type = file.type.toLowerCase();
-  if (type.includes("png")) return "png";
-  if (type.includes("webp")) return "webp";
-  return "jpg";
-}
 
 export async function registerNumberAction(
   numeroId: string,
@@ -54,11 +41,10 @@ export async function registerNumberAction(
     return { error: "Conta inativa." };
   }
 
-  const path = receiptObjectPath(profile.id, numeroId, receiptExtension(receipt));
   const bytes = new Uint8Array(await receipt.arrayBuffer());
 
   try {
-    await uploadReceipt(path, bytes, receipt.type || "image/jpeg");
+    await saveReceipt(numeroId, profile.id, bytes, receipt.type || "image/jpeg");
   } catch {
     return { error: "Não foi possível enviar o comprovante. Tente novamente." };
   }
@@ -70,10 +56,10 @@ export async function registerNumberAction(
       actorIsStaff: isStaff(profile.role),
       nomeComprador: parsed.data.nome,
       telefone: onlyDigits(parsed.data.telefone),
-      comprovantePath: path,
+      comprovantePath: RECEIPT_MARKER,
     });
   } catch (error) {
-    await deleteReceipt(path).catch(() => undefined);
+    await deleteReceipt(numeroId).catch(() => undefined);
     return { error: raffleErrorMessage(error, "Não foi possível registrar o número.") };
   }
 
@@ -89,26 +75,15 @@ export async function registerNumberAction(
 }
 
 export async function getSignedReceiptUrl(
-  path: string,
+  numeroId: string,
 ): Promise<{ url: string } | { error: string }> {
-  if (!path) return { error: "Comprovante indisponível." };
-  if (path.includes("..") || path.startsWith("/")) {
-    return { error: "Comprovante indisponível." };
-  }
+  if (!numeroId) return { error: "Comprovante indisponível." };
 
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Sessão expirada." };
-
-  const ownerPrefix = `${STORAGE_PREFIX}/${profile.id}/`;
-  const canRead = isStaff(profile.role) || path.startsWith(ownerPrefix);
-  if (!canRead) {
+  if (!isStaff(profile.role)) {
     return { error: "Você não tem permissão para ver este comprovante." };
   }
 
-  try {
-    const url = await signedReceiptUrl(path);
-    return { url };
-  } catch {
-    return { error: "Você não tem permissão para ver este comprovante." };
-  }
+  return { url: `/api/comprovantes/${encodeURIComponent(numeroId)}` };
 }

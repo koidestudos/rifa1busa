@@ -28,7 +28,7 @@ export function ReceiptViewer({
       return;
     }
     setLoading(true);
-    const result = await getSignedReceiptUrl(purchase.comprovante_url);
+    const result = await getSignedReceiptUrl(item.id);
     setLoading(false);
     if ("error" in result) {
       notify(result.error, "error");

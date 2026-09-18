@@ -79,8 +79,6 @@ export async function claimNumber(input: ClaimInput) {
 }
 
 export async function releaseNumber(numeroId: string) {
-  let comprovantePath = "";
-
   await adminDb().runTransaction(async (tx) => {
     const nRef = numeroRef(numeroId);
     const rRef = registroRef(numeroId);
@@ -96,7 +94,6 @@ export async function releaseNumber(numeroId: string) {
     }
 
     const numero = numeroSnap.data() as NumeroDoc;
-    comprovantePath = String(registroSnap.data()?.comprovantePath ?? "");
     const wasSold = numero.status === "PEGO" || registroSnap.exists;
     const now = FieldValue.serverTimestamp();
 
@@ -106,8 +103,6 @@ export async function releaseNumber(numeroId: string) {
       tx.set(sRef, nextStats(-1, statsSnap.data()), { merge: true });
     }
   });
-
-  return { comprovantePath };
 }
 
 export async function deleteRegistro(registroId: string) {

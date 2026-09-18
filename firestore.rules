@@ -34,11 +34,25 @@ rules_version = '2';
 //   - alunoId: string uid (immutable)
 //   - nomeComprador: string (PII)
 //   - telefone: string digits (PII)
-//   - comprovantePath: string storage path
+//   - comprovantePath: string marker ("firestore" or empty)
 //   - valor: number == 5
 //   - status: PEGO | CANCELADO
 //   - createdAt: timestamp (immutable)
 //   - updatedAt: timestamp
+//
+// Collection: comprovantes
+// Document ID: raffle number id ("1"..."435")
+// Fields:
+//   - alunoId: string uid
+//   - contentType: string (image/jpeg|png|webp)
+//   - size: int 1-8388608
+//   - chunkCount: int 1-20
+//   - createdAt: timestamp
+// Subcollection: comprovantes/{numeroId}/chunks/{index}
+//   - index: int
+//   - data: bytes (<= 700000)
+// Receipt images live in Firestore (Spark/free). No Cloud Storage.
+// Homepage and receipts are read via Admin SDK, not the client SDK.
 //
 // Collection: stats
 // Document ID: "public"
@@ -119,6 +133,23 @@ service cloud.firestore {
         data.updatedAt is timestamp;
     }
 
+    function isValidComprovante(data) {
+      return data.keys().hasOnly([
+          'alunoId', 'contentType', 'size', 'chunkCount', 'createdAt'
+        ]) &&
+        data.alunoId is string && data.alunoId.size() > 0 && data.alunoId.size() <= 128 &&
+        data.contentType is string && data.contentType.size() > 0 && data.contentType.size() <= 80 &&
+        data.size is int && data.size > 0 && data.size <= 8388608 &&
+        data.chunkCount is int && data.chunkCount >= 1 && data.chunkCount <= 20 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidChunk(data) {
+      return data.keys().hasOnly(['index', 'data']) &&
+        data.index is int && data.index >= 0 && data.index <= 20 &&
+        data.data is bytes && data.data.size() > 0 && data.data.size() <= 800000;
+    }
+
     function isValidStats(data) {
       return data.keys().hasOnly(['total', 'sold', 'available', 'raised', 'updatedAt']) &&
         data.total is int && data.total == 435 &&
@@ -164,6 +195,25 @@ service cloud.firestore {
         request.resource.data.createdAt == resource.data.createdAt &&
         false;
       allow delete: if false;
+    }
+
+    match /comprovantes/{numeroId} {
+      allow read: if false;
+      allow create: if isValidComprovante(request.resource.data) && false;
+      allow update: if isValidComprovante(request.resource.data) &&
+        request.resource.data.alunoId == resource.data.alunoId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        false;
+      allow delete: if false;
+
+      match /chunks/{chunkId} {
+        allow read: if false;
+        allow create: if isValidChunk(request.resource.data) && false;
+        allow update: if isValidChunk(request.resource.data) &&
+          request.resource.data.index == resource.data.index &&
+          false;
+        allow delete: if false;
+      }
     }
 
     match /stats/{docId} {

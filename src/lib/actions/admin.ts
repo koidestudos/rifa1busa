@@ -6,7 +6,7 @@ import { requireStaff, requireSuperAdmin } from "@/lib/auth";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { raffleErrorMessage } from "@/lib/firebase/errors";
 import { claimNumber, deleteRegistro, releaseNumber } from "@/lib/firebase/raffle";
-import { deleteReceipt } from "@/lib/firebase/storage";
+import { deleteReceipt } from "@/lib/firebase/receipts";
 import type { ProfileDoc } from "@/lib/firebase/mappers";
 import { onlyDigits } from "@/lib/format";
 import { buyerSchema } from "@/lib/validations";
@@ -56,8 +56,8 @@ export async function setRoleAction(
 export async function releaseNumberAction(numeroId: string): Promise<ActionResult> {
   await requireStaff();
   try {
-    const { comprovantePath } = await releaseNumber(numeroId);
-    await deleteReceipt(comprovantePath).catch(() => undefined);
+    await releaseNumber(numeroId);
+    await deleteReceipt(numeroId).catch(() => undefined);
     revalidateAdmin();
     return { ok: true };
   } catch (error) {
@@ -97,8 +97,8 @@ export async function markNumberTakenAction(
 export async function deleteRegistroAction(registroId: string): Promise<ActionResult> {
   await requireStaff();
   try {
-    const { comprovantePath } = await deleteRegistro(registroId);
-    await deleteReceipt(comprovantePath).catch(() => undefined);
+    await deleteRegistro(registroId);
+    await deleteReceipt(registroId).catch(() => undefined);
     revalidateAdmin();
     return { ok: true };
   } catch (error) {

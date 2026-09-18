@@ -1,6 +1,5 @@
 export const SESSION_COOKIE_NAME = "rifa_session";
 export const SESSION_MAX_MS = 1000 * 60 * 60 * 24 * 5;
-export const STORAGE_PREFIX = "payment-proofs";
 
 export function getFirebaseProjectId() {
   return (
