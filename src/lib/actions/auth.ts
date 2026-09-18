@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { loginToEmail } from "@/lib/auth-utils";
 import { homePathForRole } from "@/lib/auth";
 import { loginSchema, passwordChangeSchema } from "@/lib/validations";
@@ -10,6 +11,12 @@ import { loginSchema, passwordChangeSchema } from "@/lib/validations";
 export type ActionResult = { error: string } | { ok: true };
 
 export async function loginAction(formData: FormData): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) {
+    return {
+      error: "O Supabase ainda não está configurado. Siga o README para ligar o projeto.",
+    };
+  }
+
   const parsed = loginSchema.safeParse({
     login: formData.get("login"),
     password: formData.get("password"),
