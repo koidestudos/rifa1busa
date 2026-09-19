@@ -32,29 +32,6 @@ export function AdminDashboard({
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {scoped ? (
-          <>
-            <StatCard label="Alunos visíveis" value={String(students.length)} />
-            <StatCard label="Números visíveis" value={String(stats.total)} />
-            <StatCard label="Números pegos" value={String(stats.sold)} />
-            <StatCard label="Arrecadação visível" value={formatBRL(stats.raised)} />
-          </>
-        ) : (
-          <>
-            <StatCard label="Total de números" value={String(stats.total)} />
-            <StatCard label="Números pegos" value={String(stats.sold)} />
-            <StatCard label="Números disponíveis" value={String(stats.available)} />
-            <StatCard label="Total arrecadado" value={formatBRL(stats.raised)} />
-          </>
-        )}
-      </section>
-      {scoped ? (
-        <p className="text-sm font-semibold text-navy/60">
-          Estas estatísticas incluem somente os alunos que você pode visualizar.
-        </p>
-      ) : null}
-
       <section className="overflow-hidden rounded-3xl bg-white shadow-[0_12px_30px_rgba(6,28,58,0.06)]">
         <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -86,6 +63,29 @@ export function AdminDashboard({
           />
         </div>
       </section>
+
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {scoped ? (
+          <>
+            <StatCard label="Alunos visíveis" value={String(students.length)} />
+            <StatCard label="Números visíveis" value={String(stats.total)} />
+            <StatCard label="Números pegos" value={String(stats.sold)} />
+            <StatCard label="Arrecadação visível" value={formatBRL(stats.raised)} />
+          </>
+        ) : (
+          <>
+            <StatCard label="Total de números" value={String(stats.total)} />
+            <StatCard label="Números pegos" value={String(stats.sold)} />
+            <StatCard label="Números disponíveis" value={String(stats.available)} />
+            <StatCard label="Total arrecadado" value={formatBRL(stats.raised)} />
+          </>
+        )}
+      </section>
+      {scoped ? (
+        <p className="text-sm font-semibold text-navy/60">
+          Estas estatísticas incluem somente os alunos que você pode visualizar.
+        </p>
+      ) : null}
 
       <section className="overflow-hidden rounded-3xl bg-white shadow-[0_12px_30px_rgba(6,28,58,0.06)]">
         <div className="flex items-center justify-between gap-3 px-5 py-4">
