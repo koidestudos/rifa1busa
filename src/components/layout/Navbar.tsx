@@ -79,15 +79,18 @@ export function Navbar({ profile = null }: NavbarProps) {
             )}
           </nav>
 
-          <button
-            type="button"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl bg-white/10 lg:hidden"
-            onClick={() => setOpen((value) => !value)}
-            aria-label={open ? "Fechar menu" : "Abrir menu"}
-            aria-expanded={open}
-          >
-            {open ? <X /> : <Menu />}
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            {profile ? <LogoutButton /> : null}
+            <button
+              type="button"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl bg-white/10"
+              onClick={() => setOpen((value) => !value)}
+              aria-label={open ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={open}
+            >
+              {open ? <X /> : <Menu />}
+            </button>
+          </div>
         </div>
       </div>
       <div className="flag-stripes h-1.5" />
