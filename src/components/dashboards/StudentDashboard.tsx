@@ -52,7 +52,9 @@ export function StudentDashboard({
       className={
         printMode && !adminView
           ? "print-stage mx-auto max-w-md px-3 py-4"
-          : "mx-auto max-w-xl px-4 py-6 pb-24 md:pb-8"
+          : adminView
+            ? "mx-auto max-w-xl px-0 py-2 pb-28 md:pb-8"
+            : "mx-auto max-w-xl px-4 py-6 pb-24 md:pb-8"
       }
     >
       {adminView ? (
