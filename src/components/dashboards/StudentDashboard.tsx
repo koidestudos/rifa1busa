@@ -10,8 +10,9 @@ import { PrizePanel } from "@/components/prizes/PrizePanel";
 import { Button } from "@/components/ui/Button";
 import { UsaFlag } from "@/components/brand/Decor";
 import { NUMBERS_PER_STUDENT, TICKET_PRICE } from "@/lib/constants";
-import { formatBRL } from "@/lib/format";
-import { isStaff, type NumberWithOwner, type Profile } from "@/lib/types";
+import { formatBRL, formatDateTime } from "@/lib/format";
+import { hasEnteredSite, isStaff, type NumberWithOwner, type Profile } from "@/lib/types";
+import { LoginStatusBadge } from "@/components/admin/LoginStatusBadge";
 
 export function StudentDashboard({
   student,
@@ -58,9 +59,35 @@ export function StudentDashboard({
       }
     >
       {adminView ? (
-        <p className="mb-4 rounded-2xl bg-gold/20 px-4 py-3 text-sm font-semibold text-navy">
-          Visualização administrativa de {student.nome}. Você continua logado como {viewer.nome}.
-        </p>
+        <div className="mb-4 space-y-2">
+          <p className="rounded-2xl bg-gold/20 px-4 py-3 text-sm font-semibold text-navy">
+            Visualização administrativa de {student.nome}. Você continua logado como {viewer.nome}.
+          </p>
+          <div className="rounded-2xl bg-white px-4 py-3 shadow-[0_12px_30px_rgba(6,28,58,0.06)]">
+            <div className="flex flex-wrap items-center gap-3">
+              <LoginStatusBadge
+                hasLoggedIn={hasEnteredSite(student)}
+                firstLoginAt={student.first_login_at}
+                lastLoginAt={student.last_login_at}
+                compact
+              />
+              {hasEnteredSite(student) ? (
+                <p className="text-sm font-semibold text-navy/70">
+                  {student.first_login_at
+                    ? `Primeiro acesso: ${formatDateTime(student.first_login_at)}`
+                    : "Já entrou no site (trocou a senha inicial)."}
+                  {student.last_login_at
+                    ? ` · Último acesso: ${formatDateTime(student.last_login_at)}`
+                    : ""}
+                </p>
+              ) : (
+                <p className="text-sm font-semibold text-navy/70">
+                  Esta pessoa ainda não fez o primeiro login no site.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       ) : null}
 
       <section className="print-hero rounded-3xl bg-navy p-5 text-white shadow-[0_12px_30px_rgba(6,28,58,0.18)]">

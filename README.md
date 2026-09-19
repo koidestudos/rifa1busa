@@ -36,7 +36,7 @@ As regras em `firestore.rules` são um protótipo para revisão: o cliente não 
 
 Não há SQL. O seed cria:
 
-- `profiles/{uid}` — nome, login, e-mail interno, cargo, troca de senha
+- `profiles/{uid}` — nome, login, e-mail interno, cargo, troca de senha, primeiro e último acesso
 - `numeros/{1..435}` — dono, status DISPONÍVEL/PEGO
 - `registros/{numero}` — 1:1 com o número (comprador, telefone)
 - `comprovantes/{numero}` — foto do comprovante (em pedaços, por causa do limite de 1 MB do documento)
@@ -161,6 +161,7 @@ Depois do deploy:
 - Aluno não acessa `/admin`.
 - Aluno não altera o próprio `role`, o dono do número nem registros de outros (escritas do cliente estão bloqueadas).
 - Admin vê **somente** os alunos liberados pelo SUPER ADMIN (painel, números, compradores e comprovantes).
+- O painel admin mostra quem já fez o primeiro login no site e quem ainda não entrou.
 - Só o SUPER ADMIN promove/remove administradores e define permissões de visualização.
 - O SUPER ADMIN vê a rifa inteira; as permissões dos outros admins não o limitam.
 - Administradores comuns **não** criam outro SUPER ADMIN nem alteram permissões.

@@ -68,16 +68,32 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
       return { error: "Login ou senha inválidos. Confira seus dados e tente de novo." };
     }
 
-    profile = mapProfile(snap.id, snap.data() as ProfileDoc);
+    const data = snap.data() as ProfileDoc;
+    profile = mapProfile(snap.id, data);
     if (!profile.is_active) {
       return { error: "Esta conta está desativada. Fale com a organização da rifa." };
     }
+
+    const loginUpdate: {
+      lastLoginAt: FieldValue;
+      updatedAt: FieldValue;
+      firstLoginAt?: FieldValue;
+    } = {
+      lastLoginAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (!data.firstLoginAt) {
+      loginUpdate.firstLoginAt = FieldValue.serverTimestamp();
+    }
+    await adminDb().collection("profiles").doc(uid).update(loginUpdate);
   } catch (error) {
     unstable_rethrow(error);
     console.error("loginAction profile", error);
     return { error: "Não foi possível entrar agora. Tente novamente." };
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/admin/alunos", "layout");
   await createSessionCookie(uid);
   redirect(homePathForRole(profile.role, profile.must_change_password));
 }

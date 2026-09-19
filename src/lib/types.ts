@@ -10,6 +10,8 @@ export type Profile = {
   role: UserRole;
   must_change_password: boolean;
   is_active: boolean;
+  first_login_at: string | null;
+  last_login_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -52,6 +54,9 @@ export type StudentProgress = {
   disponiveis: number;
   arrecadado: number;
   percentual: number;
+  has_logged_in: boolean;
+  first_login_at: string | null;
+  last_login_at: string | null;
 };
 
 export type RaffleStats = {
@@ -67,6 +72,18 @@ export function isStaff(role: UserRole | null | undefined) {
 
 export function isSuperAdmin(role: UserRole | null | undefined) {
   return role === "super_admin";
+}
+
+export function hasEnteredSite(profile: {
+  first_login_at?: string | null;
+  last_login_at?: string | null;
+  must_change_password: boolean;
+}) {
+  return Boolean(
+    profile.first_login_at ||
+      profile.last_login_at ||
+      profile.must_change_password === false,
+  );
 }
 
 export function roleLabel(role: UserRole) {
