@@ -14,6 +14,8 @@ export type ProfileDoc = {
   role: UserRole;
   mustChangePassword: boolean;
   isActive: boolean;
+  firstLoginAt?: Timestamp | Date | string | null;
+  lastLoginAt?: Timestamp | Date | string | null;
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
 };
@@ -48,6 +50,14 @@ function toIso(value: Timestamp | Date | string | undefined) {
   return new Date().toISOString();
 }
 
+function toIsoOrNull(value: Timestamp | Date | string | null | undefined) {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value.toDate === "function") return value.toDate().toISOString();
+  return null;
+}
+
 export function mapProfile(id: string, data: ProfileDoc): Profile {
   return {
     id,
@@ -57,6 +67,8 @@ export function mapProfile(id: string, data: ProfileDoc): Profile {
     role: data.role,
     must_change_password: data.mustChangePassword,
     is_active: data.isActive,
+    first_login_at: toIsoOrNull(data.firstLoginAt),
+    last_login_at: toIsoOrNull(data.lastLoginAt),
     created_at: toIso(data.createdAt),
     updated_at: toIso(data.updatedAt),
   };

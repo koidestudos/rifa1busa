@@ -13,6 +13,8 @@ rules_version = '2';
 //   - role: string enum student|admin|super_admin (immutable from client)
 //   - mustChangePassword: bool
 //   - isActive: bool
+//   - firstLoginAt: timestamp (optional, first successful site login)
+//   - lastLoginAt: timestamp (optional, most recent successful site login)
 //   - createdAt: timestamp (immutable)
 //   - updatedAt: timestamp
 //
@@ -100,7 +102,7 @@ service cloud.firestore {
     function isValidProfile(data) {
       return data.keys().hasOnly([
           'nome', 'login', 'email', 'role', 'mustChangePassword',
-          'isActive', 'createdAt', 'updatedAt'
+          'isActive', 'createdAt', 'updatedAt', 'firstLoginAt', 'lastLoginAt'
         ]) &&
         data.nome is string && data.nome.size() >= 2 && data.nome.size() <= 80 &&
         data.login is string && data.login.size() >= 3 && data.login.size() <= 80 &&
@@ -109,7 +111,9 @@ service cloud.firestore {
         data.mustChangePassword is bool &&
         data.isActive is bool &&
         data.createdAt is timestamp &&
-        data.updatedAt is timestamp;
+        data.updatedAt is timestamp &&
+        (!('firstLoginAt' in data) || data.firstLoginAt is timestamp) &&
+        (!('lastLoginAt' in data) || data.lastLoginAt is timestamp);
     }
 
     function isValidNumero(data) {

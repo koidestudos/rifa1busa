@@ -16,6 +16,7 @@ import type {
   RaffleStats,
   StudentProgress,
 } from "@/lib/types";
+import { hasEnteredSite } from "@/lib/types";
 import { progressPercent } from "@/lib/format";
 
 const EMPTY_STATS: RaffleStats = {
@@ -166,6 +167,9 @@ export async function getStudentProgressList(
         disponiveis: Math.max(total - vendidos, 0),
         arrecadado: vendidos * TICKET_PRICE,
         percentual: progressPercent(vendidos, total),
+        has_logged_in: hasEnteredSite(profile),
+        first_login_at: profile.first_login_at,
+        last_login_at: profile.last_login_at,
       };
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
