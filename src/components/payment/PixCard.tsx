@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, Copy, X } from "lucide-react";
 import { PIX_KEY, PIX_QR_IMAGE } from "@/lib/constants";
 import { Button } from "@/components/ui/Button";
@@ -63,31 +64,38 @@ export function PixCard({ qrDataUrl = null, compact = false }: PixCardProps) {
     </p>
   ) : null;
 
-  const overlay = zoom && imageSrc ? (
-    <div
-      className="qr-overlay fixed inset-0 z-[90] flex items-center justify-center bg-navy-deep/80 p-4"
-      onClick={() => setZoom(false)}
-      role="dialog"
-      aria-modal="true"
-      aria-label="QR Code ampliado"
-    >
-      <button
-        type="button"
-        onClick={() => setZoom(false)}
-        className="absolute right-4 top-4 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white text-navy shadow-lg"
-        aria-label="Fechar"
-      >
-        <X />
-      </button>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={imageSrc}
-        alt="QR Code PIX ampliado"
-        className="qr-overlay-image max-h-[min(85vh,90vw)] w-[min(92vw,28rem)] max-w-full rounded-3xl bg-white object-contain p-3 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      />
-    </div>
-  ) : null;
+  const overlay =
+    zoom && imageSrc
+      ? createPortal(
+          <div
+            className="qr-overlay fixed inset-0 z-[90] flex items-center justify-center bg-navy-deep/80 p-4"
+            onClick={() => setZoom(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="QR Code ampliado"
+          >
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setZoom(false);
+              }}
+              className="absolute right-4 top-4 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white text-navy shadow-lg"
+              aria-label="Fechar QR Code"
+            >
+              <X />
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageSrc}
+              alt="QR Code PIX ampliado"
+              className="qr-overlay-image max-h-[min(85vh,90vw)] w-[min(92vw,28rem)] max-w-full rounded-3xl bg-white object-contain p-3 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>,
+          document.body,
+        )
+      : null;
 
   if (compact) {
     return (
