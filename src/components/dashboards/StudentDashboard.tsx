@@ -94,6 +94,11 @@ export function StudentDashboard({
         <div className="mt-4">
           <ProgressBar value={sold} max={total} />
         </div>
+        {printMode && !adminView ? (
+          <p className="mt-3 rounded-2xl bg-gold px-3 py-2 text-center text-sm font-black uppercase tracking-wide text-navy-deep">
+            Cada ponto vale {formatBRL(TICKET_PRICE)}
+          </p>
+        ) : null}
       </section>
 
       <section className="mt-4 rounded-3xl bg-white p-5 shadow-[0_12px_30px_rgba(6,28,58,0.06)]">
