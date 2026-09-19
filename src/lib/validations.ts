@@ -45,7 +45,10 @@ export function validateReceiptFile(file: File | null) {
   }
   const type = file.type.toLowerCase();
   const allowed: readonly string[] = RECEIPT_MIME_TYPES;
-  if (!allowed.includes(type) && !/\.(jpe?g|png|webp)$/i.test(file.name)) {
+  if (!type && !/\.(jpe?g|png|webp)$/i.test(file.name)) {
+    return "Use uma imagem JPG, PNG ou WebP";
+  }
+  if (type && !allowed.includes(type) && !/\.(jpe?g|png|webp)$/i.test(file.name)) {
     return "Use uma imagem JPG, PNG ou WebP";
   }
   return null;
