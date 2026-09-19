@@ -81,7 +81,7 @@ export function StudentDashboard({
             <Button
               size="md"
               variant={printMode ? "gold" : "outline"}
-              className="print-hide shrink-0 text-[11px]"
+              className="shrink-0 text-[11px]"
               onClick={() => setPrintMode((value) => !value)}
             >
               <Camera className="h-4 w-4" />
