@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { readReceipt } from "@/lib/firebase/receipts";
-import { isStaff } from "@/lib/types";
+import { canAccessStudentRecords } from "@/lib/permissions";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(
   _request: Request,
@@ -22,8 +24,8 @@ export async function GET(
     return NextResponse.json({ error: "Comprovante indisponível." }, { status: 404 });
   }
 
-  const canRead = isStaff(profile.role) || receipt.alunoId === profile.id;
-  if (!canRead) {
+  const allowed = await canAccessStudentRecords(profile, receipt.alunoId);
+  if (!allowed) {
     return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   }
 

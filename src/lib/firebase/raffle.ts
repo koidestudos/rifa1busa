@@ -108,3 +108,43 @@ export async function releaseNumber(numeroId: string) {
 export async function deleteRegistro(registroId: string) {
   return releaseNumber(registroId);
 }
+
+export type UpdateRegistroInput = {
+  numeroId: string;
+  nomeComprador: string;
+  telefone: string;
+  comprovantePath?: string;
+};
+
+export async function updateRegistro(input: UpdateRegistroInput) {
+  await adminDb().runTransaction(async (tx) => {
+    const nRef = numeroRef(input.numeroId);
+    const rRef = registroRef(input.numeroId);
+    const [numeroSnap, registroSnap] = await Promise.all([tx.get(nRef), tx.get(rRef)]);
+
+    if (!numeroSnap.exists) {
+      throw new RaffleError("not-found", "Número não encontrado.");
+    }
+    if (!registroSnap.exists) {
+      throw new RaffleError("not-found", "Este número ainda não tem registro.");
+    }
+
+    const numero = numeroSnap.data() as NumeroDoc;
+    if (numero.status !== "PEGO") {
+      throw new RaffleError("available", "Este número está disponível.");
+    }
+
+    const now = FieldValue.serverTimestamp();
+    const payload: Record<string, unknown> = {
+      nomeComprador: input.nomeComprador,
+      telefone: input.telefone,
+      updatedAt: now,
+    };
+    if (input.comprovantePath !== undefined) {
+      payload.comprovantePath = input.comprovantePath;
+    }
+
+    tx.update(rRef, payload);
+    tx.update(nRef, { updatedAt: now });
+  });
+}

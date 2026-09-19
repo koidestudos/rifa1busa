@@ -21,11 +21,7 @@ export function NumberGrid({
             numero={item.numero}
             status={item.status as NumberStatus}
             compact={compact}
-            onClick={
-              item.status === "DISPONIVEL" && onSelect
-                ? () => onSelect(item)
-                : undefined
-            }
+            onClick={onSelect ? () => onSelect(item) : undefined}
           />
         </div>
       ))}
@@ -37,10 +33,10 @@ export function NumberLegend() {
   return (
     <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-bold text-navy/70">
       <span className="inline-flex items-center gap-2">
-        <span className="h-3 w-3 rounded-full bg-ball" /> Disponível
+        <span aria-hidden>🔵</span> Disponível
       </span>
       <span className="inline-flex items-center gap-2">
-        <span className="h-3 w-3 rounded-full bg-ball-taken" /> Pego
+        <span aria-hidden>🔴</span> PEGO
       </span>
     </div>
   );

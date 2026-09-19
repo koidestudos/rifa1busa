@@ -4,18 +4,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 
-const links = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/numeros", label: "Números" },
-  { href: "/admin/administradores", label: "Administradores" },
-];
-
-export function AdminNav() {
+export function AdminNav({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
   const pathname = usePathname();
+  const links = [
+    { href: "/admin", label: "Dashboard", match: (path: string) => path === "/admin" || path.startsWith("/admin/alunos") },
+    { href: "/admin/numeros", label: "Números", match: (path: string) => path.startsWith("/admin/numeros") },
+    ...(isSuperAdmin
+      ? [
+          {
+            href: "/admin/administradores",
+            label: "Administradores",
+            match: (path: string) => path.startsWith("/admin/administradores"),
+          },
+        ]
+      : []),
+  ];
+
   return (
     <nav className="hidden gap-2 overflow-x-auto pb-1 md:flex">
       {links.map((link) => {
-        const active = pathname === link.href;
+        const active = link.match(pathname);
         return (
           <Link
             key={link.href}

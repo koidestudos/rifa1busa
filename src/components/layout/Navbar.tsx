@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Menu, Shield, UserRound, X } from "lucide-react";
-import { logoutAction } from "@/lib/actions/auth";
 import { isStaff, roleLabel, type Profile } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
+import { LogoutButton } from "@/components/layout/LogoutButton";
 import { UsaFlag } from "@/components/brand/Decor";
 
 type NavbarProps = {
@@ -25,7 +25,7 @@ export function Navbar({ profile = null }: NavbarProps) {
   ];
 
   return (
-    <header className="sticky top-0 z-40">
+    <header className="sticky top-0 z-40 print-hide">
       <div className="bg-navy text-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <Link href="/" className="flex min-w-0 items-center gap-2">
@@ -70,11 +70,7 @@ export function Navbar({ profile = null }: NavbarProps) {
                     ) : null}
                   </span>
                 </div>
-                <form action={logoutAction}>
-                  <Button variant="ghost" size="md">
-                    Sair
-                  </Button>
-                </form>
+                <LogoutButton />
               </>
             ) : (
               <Link href="/login">
@@ -127,11 +123,7 @@ export function Navbar({ profile = null }: NavbarProps) {
                     Painel administrativo
                   </Link>
                 ) : null}
-                <form action={logoutAction}>
-                  <Button className="w-full" variant="secondary">
-                    Sair
-                  </Button>
-                </form>
+                <LogoutButton className="w-full" variant="secondary" />
               </>
             ) : (
               <Link href="/login" onClick={() => setOpen(false)}>

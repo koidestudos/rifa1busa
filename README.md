@@ -41,6 +41,7 @@ Não há SQL. O seed cria:
 - `registros/{numero}` — 1:1 com o número (comprador, telefone)
 - `comprovantes/{numero}` — foto do comprovante (em pedaços, por causa do limite de 1 MB do documento)
 - `stats/public` — totais da home (sem dados pessoais)
+- `admin_student_permissions/{adminId}_{studentId}` — quais alunos cada ADMIN pode ver (o SUPER ADMIN vê todos)
 
 ## 4. Como publicar regras e índices
 
@@ -156,12 +157,13 @@ Depois do deploy:
 
 ## Regras de segurança
 
-- Aluno comum vê só os próprios números.
+- Aluno comum vê só os próprios números, pode registrar/editar/excluir os registros dele.
 - Aluno não acessa `/admin`.
 - Aluno não altera o próprio `role`, o dono do número nem registros de outros (escritas do cliente estão bloqueadas).
-- Admin vê a rifa inteira, pode liberar números e corrigir registros.
-- Só o SUPER ADMIN promove/remove administradores.
-- Administradores comuns **não** criam outro SUPER ADMIN.
+- Admin vê **somente** os alunos liberados pelo SUPER ADMIN (painel, números, compradores e comprovantes).
+- Só o SUPER ADMIN promove/remove administradores e define permissões de visualização.
+- O SUPER ADMIN vê a rifa inteira; as permissões dos outros admins não o limitam.
+- Administradores comuns **não** criam outro SUPER ADMIN nem alteram permissões.
 - O registro do número usa transação no Firestore: status `DISPONIVEL` + documento `registros/{numero}` criado com `create`. Duas vendas do mesmo número ao mesmo tempo: só uma entra.
 
 ## PIX

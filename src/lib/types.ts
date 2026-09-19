@@ -65,6 +65,10 @@ export function isStaff(role: UserRole | null | undefined) {
   return role === "admin" || role === "super_admin";
 }
 
+export function isSuperAdmin(role: UserRole | null | undefined) {
+  return role === "super_admin";
+}
+
 export function roleLabel(role: UserRole) {
   if (role === "super_admin") return "SUPER ADMIN";
   if (role === "admin") return "ADMIN";
