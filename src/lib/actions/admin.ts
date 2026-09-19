@@ -8,18 +8,36 @@ import { setAuthRoleClaim } from "@/lib/firebase/identity-admin";
 import { raffleErrorMessage } from "@/lib/firebase/errors";
 import { claimNumber, deleteRegistro, releaseNumber } from "@/lib/firebase/raffle";
 import { deleteReceipt } from "@/lib/firebase/receipts";
-import type { ProfileDoc } from "@/lib/firebase/mappers";
+import type { NumeroDoc, ProfileDoc } from "@/lib/firebase/mappers";
 import { onlyDigits } from "@/lib/format";
+import {
+  canViewStudentInAdmin,
+  deletePermissionsForAdmin,
+  replaceAllowedStudentIds,
+} from "@/lib/permissions";
 import { buyerSchema } from "@/lib/validations";
 
 type ActionResult = { ok: true } | { error: string };
 
-function revalidateAdmin() {
+function revalidateAdmin(alunoId?: string) {
   revalidatePath("/admin");
   revalidatePath("/admin/numeros");
   revalidatePath("/admin/administradores");
   revalidatePath("/painel");
   revalidatePath("/");
+  if (alunoId) revalidatePath(`/admin/alunos/${alunoId}`);
+}
+
+async function requireStaffNumberAccess(numeroId: string) {
+  const staff = await requireStaff();
+  const snap = await adminDb().collection("numeros").doc(numeroId).get();
+  if (!snap.exists) return { ok: false as const, error: "Número não encontrado." };
+  const numero = snap.data() as NumeroDoc;
+  const allowed = await canViewStudentInAdmin(staff, numero.alunoId);
+  if (!allowed && staff.id !== numero.alunoId) {
+    return { ok: false as const, error: "Você não tem permissão para este número." };
+  }
+  return { ok: true as const, staff, numero };
 }
 
 export async function setRoleAction(
@@ -50,16 +68,54 @@ export async function setRoleAction(
     updatedAt: FieldValue.serverTimestamp(),
   });
   await setAuthRoleClaim(userId, role);
+
+  if (role === "student") {
+    await deletePermissionsForAdmin(userId);
+  }
+
+  revalidateAdmin();
+  return { ok: true };
+}
+
+export async function saveAdminPermissionsAction(
+  adminId: string,
+  studentIds: string[],
+): Promise<ActionResult> {
+  await requireSuperAdmin();
+
+  const adminSnap = await adminDb().collection("profiles").doc(adminId).get();
+  if (!adminSnap.exists) return { error: "Administrador não encontrado." };
+
+  const admin = adminSnap.data() as ProfileDoc;
+  if (admin.role === "super_admin") {
+    return { error: "O SUPER ADMIN já tem acesso a todos os alunos." };
+  }
+  if (admin.role !== "admin") {
+    return { error: "Só é possível definir permissões de administradores." };
+  }
+
+  const unique = [...new Set(studentIds.filter(Boolean))];
+  if (unique.length > 0) {
+    const profileSnaps = await adminDb().getAll(
+      ...unique.map((id) => adminDb().collection("profiles").doc(id)),
+    );
+    if (profileSnaps.some((snap) => !snap.exists)) {
+      return { error: "Um ou mais alunos selecionados não existem." };
+    }
+  }
+
+  await replaceAllowedStudentIds(adminId, unique);
   revalidateAdmin();
   return { ok: true };
 }
 
 export async function releaseNumberAction(numeroId: string): Promise<ActionResult> {
-  await requireStaff();
+  const access = await requireStaffNumberAccess(numeroId);
+  if (!access.ok) return access;
   try {
     await releaseNumber(numeroId);
     await deleteReceipt(numeroId).catch(() => undefined);
-    revalidateAdmin();
+    revalidateAdmin(access.numero.alunoId);
     return { ok: true };
   } catch (error) {
     return { error: raffleErrorMessage(error, "Não foi possível liberar o número.") };
@@ -70,7 +126,8 @@ export async function markNumberTakenAction(
   numeroId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const staff = await requireStaff();
+  const access = await requireStaffNumberAccess(numeroId);
+  if (!access.ok) return access;
   const parsed = buyerSchema.safeParse({
     nome: formData.get("nome"),
     telefone: formData.get("telefone"),
@@ -82,13 +139,13 @@ export async function markNumberTakenAction(
   try {
     await claimNumber({
       numeroId,
-      actorUid: staff.id,
+      actorUid: access.staff.id,
       actorIsStaff: true,
       nomeComprador: parsed.data.nome,
       telefone: onlyDigits(parsed.data.telefone),
       comprovantePath: "",
     });
-    revalidateAdmin();
+    revalidateAdmin(access.numero.alunoId);
     return { ok: true };
   } catch (error) {
     return { error: raffleErrorMessage(error, "Não foi possível marcar o número.") };
@@ -96,11 +153,12 @@ export async function markNumberTakenAction(
 }
 
 export async function deleteRegistroAction(registroId: string): Promise<ActionResult> {
-  await requireStaff();
+  const access = await requireStaffNumberAccess(registroId);
+  if (!access.ok) return access;
   try {
     await deleteRegistro(registroId);
     await deleteReceipt(registroId).catch(() => undefined);
-    revalidateAdmin();
+    revalidateAdmin(access.numero.alunoId);
     return { ok: true };
   } catch (error) {
     return { error: raffleErrorMessage(error, "Não foi possível excluir o registro.") };

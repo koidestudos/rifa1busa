@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { TOTAL_NUMBERS } from "@/lib/constants";
 import { formatBRL } from "@/lib/format";
 import type { RaffleStats, StudentProgress } from "@/lib/types";
@@ -7,18 +8,36 @@ import { ProgressBar } from "@/components/progress/ProgressBar";
 export function AdminDashboard({
   stats,
   students,
+  scoped = false,
 }: {
   stats: RaffleStats;
   students: StudentProgress[];
+  scoped?: boolean;
 }) {
   return (
     <div className="space-y-6">
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total de números" value={String(stats.total)} />
-        <StatCard label="Números pegos" value={String(stats.sold)} />
-        <StatCard label="Números disponíveis" value={String(stats.available)} />
-        <StatCard label="Total arrecadado" value={formatBRL(stats.raised)} />
+        {scoped ? (
+          <>
+            <StatCard label="Alunos visíveis" value={String(students.length)} />
+            <StatCard label="Números visíveis" value={String(stats.total)} />
+            <StatCard label="Números pegos" value={String(stats.sold)} />
+            <StatCard label="Arrecadação visível" value={formatBRL(stats.raised)} />
+          </>
+        ) : (
+          <>
+            <StatCard label="Total de números" value={String(stats.total)} />
+            <StatCard label="Números pegos" value={String(stats.sold)} />
+            <StatCard label="Números disponíveis" value={String(stats.available)} />
+            <StatCard label="Total arrecadado" value={formatBRL(stats.raised)} />
+          </>
+        )}
       </section>
+      {scoped ? (
+        <p className="text-sm font-semibold text-navy/60">
+          Estas estatísticas incluem somente os alunos que você pode visualizar.
+        </p>
+      ) : null}
 
       <section className="overflow-hidden rounded-3xl bg-white shadow-[0_12px_30px_rgba(6,28,58,0.06)]">
         <div className="flex items-center justify-between gap-3 px-5 py-4">
@@ -40,19 +59,24 @@ export function AdminDashboard({
             </thead>
             <tbody>
               {students.map((student) => (
-                <tr key={student.id} className="border-t border-navy/5">
-                  <td className="px-5 py-3 font-semibold">{student.nome}</td>
+                <tr key={student.id} className="border-t border-navy/5 hover:bg-page/80">
+                  <td className="px-5 py-3 font-semibold">
+                    <Link href={`/admin/alunos/${student.id}`} className="inline-flex items-center gap-1 text-navy underline-offset-2 hover:underline">
+                      {student.nome}
+                      <ChevronRight className="h-4 w-4 text-red" />
+                    </Link>
+                  </td>
                   <td className="px-3 py-3">{student.vendidos}</td>
                   <td className="px-3 py-3">{student.disponiveis}</td>
                   <td className="px-3 py-3">
-                    <div className="flex items-center gap-2">
+                    <Link href={`/admin/alunos/${student.id}`} className="flex items-center gap-2">
                       <div className="flex-1">
                         <ProgressBar value={student.vendidos} max={student.total || 15} />
                       </div>
                       <span className="w-10 text-right text-xs font-bold text-navy/60">
                         {student.percentual}%
                       </span>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-5 py-3 text-right font-bold text-navy">
                     {formatBRL(student.arrecadado)}
@@ -63,7 +87,9 @@ export function AdminDashboard({
           </table>
         </div>
         <p className="px-5 py-3 text-xs text-navy/50">
-          Potencial total: {formatBRL(TOTAL_NUMBERS * 5)}
+          {scoped
+            ? `Potencial visível: ${formatBRL(stats.total * 5)}`
+            : `Potencial total: ${formatBRL(TOTAL_NUMBERS * 5)}`}
         </p>
       </section>
     </div>

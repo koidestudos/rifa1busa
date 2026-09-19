@@ -114,3 +114,50 @@ body {
 .rise-in {
   animation: rise-in 0.5s ease both;
 }
+
+@keyframes qr-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes qr-image-in {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.qr-overlay {
+  animation: qr-overlay-in 0.2s ease;
+}
+
+.qr-overlay-image {
+  animation: qr-image-in 0.24s ease;
+}
+
+.print-hide {
+  display: revert;
+}
+
+body.rifa-print-mode {
+  background: #061428;
+  overflow-x: hidden;
+}
+
+body.rifa-print-mode .print-hide,
+body.rifa-print-mode header.print-hide,
+body.rifa-print-mode .bottom-nav {
+  display: none !important;
+}
+
+body.rifa-print-mode .print-stage {
+  overflow-x: hidden;
+}

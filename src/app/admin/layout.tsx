@@ -6,6 +6,7 @@ import { UsaFlag } from "@/components/brand/Decor";
 
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const profile = await requireStaff();
+  const isSuperAdmin = profile.role === "super_admin";
 
   return (
     <SiteShell profile={profile} showFooter={false}>
@@ -17,10 +18,10 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
             <p className="text-sm text-navy/60">Rifa Feira dos Países 2026</p>
           </div>
         </header>
-        <AdminNav />
+        <AdminNav isSuperAdmin={isSuperAdmin} />
         <div className="mt-5">{children}</div>
       </div>
-      <AdminBottomNav />
+      <AdminBottomNav isSuperAdmin={isSuperAdmin} />
     </SiteShell>
   );
 }

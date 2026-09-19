@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Hash, Home, LayoutDashboard, LayoutGrid, UserRound, Users } from "lucide-react";
+import { Hash, Home, LayoutDashboard, LayoutGrid, Shield } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 function NavBar({
@@ -12,8 +12,11 @@ function NavBar({
 }) {
   const pathname = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-navy/10 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(6,28,58,0.08)] md:hidden">
-      <div className="mx-auto grid max-w-lg grid-cols-3 px-2 py-1">
+    <nav className="print-hide bottom-nav fixed inset-x-0 bottom-0 z-30 border-t border-navy/10 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(6,28,58,0.08)] md:hidden">
+      <div
+        className="mx-auto grid max-w-lg px-2 py-1"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+      >
         {items.map((item) => {
           const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
@@ -36,26 +39,24 @@ function NavBar({
   );
 }
 
-export function StudentBottomNav() {
-  return (
-    <NavBar
-      items={[
-        { href: "/", label: "Início", icon: Home, exact: true },
-        { href: "/painel", label: "Meus Números", icon: LayoutGrid, exact: true },
-        { href: "/alterar-senha", label: "Perfil", icon: UserRound, exact: true },
-      ]}
-    />
-  );
+export function StudentBottomNav({ isStaff = false }: { isStaff?: boolean }) {
+  const items = [
+    { href: "/", label: "Início", icon: Home, exact: true },
+    { href: "/painel", label: "Meus Números", icon: LayoutGrid, exact: true },
+    ...(isStaff
+      ? [{ href: "/admin", label: "Admin", icon: Shield, exact: false }]
+      : []),
+  ];
+  return <NavBar items={items} />;
 }
 
-export function AdminBottomNav() {
-  return (
-    <NavBar
-      items={[
-        { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-        { href: "/admin/numeros", label: "Números", icon: Hash, exact: true },
-        { href: "/admin/administradores", label: "Admins", icon: Users, exact: true },
-      ]}
-    />
-  );
+export function AdminBottomNav({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
+  const items = [
+    { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+    { href: "/admin/numeros", label: "Números", icon: Hash, exact: true },
+    ...(isSuperAdmin
+      ? [{ href: "/admin/administradores", label: "Admins", icon: Shield, exact: false }]
+      : []),
+  ];
+  return <NavBar items={items} />;
 }

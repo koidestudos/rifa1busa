@@ -20,6 +20,16 @@ import type { Profile } from "@/lib/types";
 
 export type ActionResult = { error: string } | { ok: true };
 
+function revalidateSessionPaths() {
+  revalidatePath("/", "layout");
+  revalidatePath("/painel");
+  revalidatePath("/admin");
+  revalidatePath("/admin/numeros");
+  revalidatePath("/admin/administradores");
+  revalidatePath("/alterar-senha");
+  revalidatePath("/login");
+}
+
 export async function loginAction(formData: FormData): Promise<ActionResult> {
   if (!isFirebaseConfigured()) {
     return {
@@ -74,8 +84,7 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
 
 export async function logoutAction() {
   await clearSessionCookie();
-  revalidatePath("/", "layout");
-  redirect("/");
+  revalidateSessionPaths();
 }
 
 export async function changePasswordAction(formData: FormData): Promise<ActionResult> {

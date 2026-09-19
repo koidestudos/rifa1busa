@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 type ConfirmDialogProps = {
   open: boolean;
   title: string;
-  description: string;
+  description: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
@@ -41,7 +41,7 @@ export function ConfirmDialog({
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-deep/60 p-4 sm:items-center">
       <div className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl">
         <h2 className="font-display text-2xl text-navy">{title}</h2>
-        <p className="mt-2 text-sm leading-6 text-navy/75">{description}</p>
+        <div className="mt-2 space-y-2 text-sm leading-6 text-navy/75">{description}</div>
         <div className="mt-5 grid grid-cols-2 gap-3">
           <Button variant="secondary" onClick={onClose} disabled={pending}>
             {cancelLabel}

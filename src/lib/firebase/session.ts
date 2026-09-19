@@ -35,6 +35,13 @@ export async function signInWithPassword(email: string, password: string) {
   return { idToken: payload.idToken, uid: payload.localId };
 }
 
+const sessionCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+};
+
 export async function createSessionCookie(uid: string) {
   const token = await new SignJWT({ uid })
     .setProtectedHeader({ alg: "HS256" })
@@ -45,17 +52,22 @@ export async function createSessionCookie(uid: string) {
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
+    ...sessionCookieOptions,
     maxAge: SESSION_MAX_MS / 1000,
   });
 }
 
 export async function clearSessionCookie() {
   const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  cookieStore.set(SESSION_COOKIE_NAME, "", {
+    ...sessionCookieOptions,
+    maxAge: 0,
+    expires: new Date(0),
+  });
+  cookieStore.delete({
+    name: SESSION_COOKIE_NAME,
+    ...sessionCookieOptions,
+  });
 }
 
 export async function getSessionUid() {

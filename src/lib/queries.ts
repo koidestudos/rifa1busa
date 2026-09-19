@@ -9,7 +9,13 @@ import {
   type ProfileDoc,
   type RegistroDoc,
 } from "@/lib/firebase/mappers";
-import type { NumberWithOwner, RaffleStats, StudentProgress } from "@/lib/types";
+import { filterByAllowedStudentIds } from "@/lib/permissions";
+import type {
+  NumberWithOwner,
+  Profile,
+  RaffleStats,
+  StudentProgress,
+} from "@/lib/types";
 import { progressPercent } from "@/lib/format";
 
 const EMPTY_STATS: RaffleStats = {
@@ -18,6 +24,15 @@ const EMPTY_STATS: RaffleStats = {
   available: TOTAL_NUMBERS,
   raised: 0,
 };
+
+function toNumberWithOwner(id: string, data: NumeroDoc, purchase: NumberWithOwner["purchase"]) {
+  return {
+    ...mapNumero(id, data),
+    aluno_nome: data.alunoNome ?? "—",
+    aluno_login: data.alunoLogin ?? "",
+    purchase,
+  } satisfies NumberWithOwner;
+}
 
 export async function getRaffleStats(): Promise<RaffleStats> {
   if (!isFirebaseConfigured()) return EMPTY_STATS;
@@ -44,6 +59,17 @@ export async function getRaffleStats(): Promise<RaffleStats> {
   }
 }
 
+export function statsFromStudents(students: StudentProgress[]): RaffleStats {
+  const total = students.reduce((sum, student) => sum + student.total, 0);
+  const sold = students.reduce((sum, student) => sum + student.vendidos, 0);
+  return {
+    total,
+    sold,
+    available: Math.max(total - sold, 0),
+    raised: students.reduce((sum, student) => sum + student.arrecadado, 0),
+  };
+}
+
 export async function getStudentNumbers(alunoId: string) {
   const snap = await adminDb()
     .collection("numeros")
@@ -55,7 +81,58 @@ export async function getStudentNumbers(alunoId: string) {
     .sort((a, b) => a.numero - b.numero);
 }
 
-export async function getStudentProgressList(): Promise<StudentProgress[]> {
+export async function getStudentNumbersWithPurchases(
+  alunoId: string,
+): Promise<NumberWithOwner[]> {
+  const numerosSnap = await adminDb()
+    .collection("numeros")
+    .where("alunoId", "==", alunoId)
+    .get();
+
+  const taken = numerosSnap.docs.filter(
+    (doc) => (doc.data() as NumeroDoc).status === "PEGO",
+  );
+  const registroSnaps =
+    taken.length > 0
+      ? await adminDb().getAll(
+          ...taken.map((doc) => adminDb().collection("registros").doc(doc.id)),
+        )
+      : [];
+
+  const registros = new Map(
+    registroSnaps
+      .filter((snap) => snap.exists)
+      .map((snap) => [snap.id, mapRegistro(snap.id, snap.data() as RegistroDoc)]),
+  );
+
+  return numerosSnap.docs
+    .map((doc) => {
+      const data = doc.data() as NumeroDoc;
+      return toNumberWithOwner(doc.id, data, registros.get(doc.id) ?? null);
+    })
+    .sort((a, b) => a.numero - b.numero);
+}
+
+export async function getNumberWithOwner(
+  numeroId: string,
+): Promise<NumberWithOwner | null> {
+  const numeroSnap = await adminDb().collection("numeros").doc(numeroId).get();
+  if (!numeroSnap.exists) return null;
+
+  const data = numeroSnap.data() as NumeroDoc;
+  const registroSnap = await adminDb().collection("registros").doc(numeroId).get();
+  return toNumberWithOwner(
+    numeroSnap.id,
+    data,
+    registroSnap.exists
+      ? mapRegistro(registroSnap.id, registroSnap.data() as RegistroDoc)
+      : null,
+  );
+}
+
+export async function getStudentProgressList(
+  allowedStudentIds: string[] | null = null,
+): Promise<StudentProgress[]> {
   const [profilesSnap, numerosSnap] = await Promise.all([
     adminDb().collection("profiles").get(),
     adminDb().collection("numeros").get(),
@@ -70,7 +147,7 @@ export async function getStudentProgressList(): Promise<StudentProgress[]> {
     soldByAluno.set(data.alunoId, current);
   }
 
-  return profilesSnap.docs
+  const all = profilesSnap.docs
     .map((doc) => {
       const profile = mapProfile(doc.id, doc.data() as ProfileDoc);
       const counts = soldByAluno.get(profile.id) ?? {
@@ -92,9 +169,13 @@ export async function getStudentProgressList(): Promise<StudentProgress[]> {
       };
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
+  return filterByAllowedStudentIds(all, allowedStudentIds, (student) => student.id);
 }
 
-export async function getAllNumbersWithOwners(): Promise<NumberWithOwner[]> {
+export async function getAllNumbersWithOwners(
+  allowedStudentIds: string[] | null = null,
+): Promise<NumberWithOwner[]> {
   const [numerosSnap, registrosSnap] = await Promise.all([
     adminDb().collection("numeros").orderBy("numero", "asc").get(),
     adminDb().collection("registros").get(),
@@ -104,16 +185,12 @@ export async function getAllNumbersWithOwners(): Promise<NumberWithOwner[]> {
     registrosSnap.docs.map((doc) => [doc.id, mapRegistro(doc.id, doc.data() as RegistroDoc)]),
   );
 
-  return numerosSnap.docs.map((doc) => {
+  const all = numerosSnap.docs.map((doc) => {
     const data = doc.data() as NumeroDoc;
-    const numero = mapNumero(doc.id, data);
-    return {
-      ...numero,
-      aluno_nome: data.alunoNome ?? "—",
-      aluno_login: data.alunoLogin ?? "",
-      purchase: registros.get(doc.id) ?? null,
-    };
+    return toNumberWithOwner(doc.id, data, registros.get(doc.id) ?? null);
   });
+
+  return filterByAllowedStudentIds(all, allowedStudentIds, (item) => item.aluno_id);
 }
 
 export async function getProfiles() {
@@ -121,4 +198,10 @@ export async function getProfiles() {
   return snap.docs
     .map((doc) => mapProfile(doc.id, doc.data() as ProfileDoc))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+export async function getProfileById(id: string): Promise<Profile | null> {
+  const snap = await adminDb().collection("profiles").doc(id).get();
+  if (!snap.exists) return null;
+  return mapProfile(snap.id, snap.data() as ProfileDoc);
 }

@@ -59,6 +59,15 @@ rules_version = '2';
 // Fields: total, sold, available, raised, updatedAt — no PII
 // Homepage reads this via Admin SDK, not the client SDK.
 //
+// Collection: admin_student_permissions
+// Document ID: `${adminId}_${studentId}`
+// Fields:
+//   - adminId: string uid of an ADMIN (not super_admin)
+//   - studentId: string uid the admin may view
+//   - createdAt: timestamp
+// Super admin visibility is implicit (all students). Regular admins only see
+// students listed here. Enforced in server actions/queries (Admin SDK).
+//
 // Role authority: Auth custom claim `request.auth.token.role` set only by Admin SDK.
 // All writes in this app go through firebase-admin after session checks.
 // Client writes always fail: validators run, then the extra `&& false`.
@@ -159,6 +168,13 @@ service cloud.firestore {
         data.updatedAt is timestamp;
     }
 
+    function isValidPermission(data) {
+      return data.keys().hasOnly(['adminId', 'studentId', 'createdAt']) &&
+        data.adminId is string && data.adminId.size() > 0 && data.adminId.size() <= 128 &&
+        data.studentId is string && data.studentId.size() > 0 && data.studentId.size() <= 128 &&
+        data.createdAt is timestamp;
+    }
+
     match /profiles/{userId} {
       allow read: if isOwner(userId) || isStaff();
       allow create: if isValidProfile(request.resource.data) && false;
@@ -220,6 +236,14 @@ service cloud.firestore {
       allow read: if false;
       allow create: if isValidStats(request.resource.data) && isSuperAdmin() && false;
       allow update: if isValidStats(request.resource.data) && isSuperAdmin() && false;
+      allow delete: if false;
+    }
+
+    match /admin_student_permissions/{id} {
+      allow read: if isSuperAdmin() ||
+        (isAuthenticated() && resource.data.adminId == request.auth.uid);
+      allow create: if isValidPermission(request.resource.data) && false;
+      allow update: if false;
       allow delete: if false;
     }
 
