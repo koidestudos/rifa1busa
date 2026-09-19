@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["firebase-admin"],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "4mb",
+    },
+    proxyClientMaxBodySize: "4mb",
+  },
   async headers() {
     return [
       {

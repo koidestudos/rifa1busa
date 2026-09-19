@@ -50,7 +50,9 @@ async function requireNumberAccess(numeroId: string) {
 
 function receiptFromForm(formData: FormData) {
   const file = formData.get("comprovante");
-  return file instanceof File ? file : null;
+  if (file instanceof File && file.size > 0) return file;
+  const camera = formData.get("comprovante_camera");
+  return camera instanceof File && camera.size > 0 ? camera : null;
 }
 
 export async function registerNumberAction(
@@ -84,7 +86,8 @@ export async function registerNumberAction(
       bytes,
       receipt.type || "image/jpeg",
     );
-  } catch {
+  } catch (error) {
+    console.error("saveReceipt", error);
     return { error: "Não foi possível enviar o comprovante. Tente novamente." };
   }
 
@@ -141,7 +144,8 @@ export async function updateNumberAction(
         bytes,
         receipt.type || "image/jpeg",
       );
-    } catch {
+    } catch (error) {
+      console.error("saveReceipt", error);
       return { error: "Não foi possível enviar o comprovante. Tente novamente." };
     }
   }

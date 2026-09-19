@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Camera, Expand, ImagePlus, X } from "lucide-react";
+import { Expand, X } from "lucide-react";
 import QRCode from "qrcode";
 import { PixCard } from "@/components/payment/PixCard";
+import { ReceiptPicker } from "@/components/payment/ReceiptPicker";
 import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/actions/numbers";
 import { PIX_KEY, TICKET_PRICE } from "@/lib/constants";
 import { formatBRL, formatDateTime, formatPhone } from "@/lib/format";
+import { uploadActionErrorMessage } from "@/lib/receipt-image";
 import type { NumberWithOwner } from "@/lib/types";
 
 type NumberRecordModalProps = {
@@ -38,11 +40,11 @@ export function NumberRecordModal({
   const [telefone, setTelefone] = useState(
     item.purchase ? formatPhone(item.purchase.telefone) : "",
   );
-  const [fileName, setFileName] = useState("");
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const taken = item.status === "PEGO";
   const purchase = item.purchase ?? null;
@@ -81,56 +83,70 @@ export function NumberRecordModal({
   async function onRegister(formData: FormData) {
     setPending(true);
     setError(null);
-    const result = await registerNumberAction(current.id, formData);
-    setPending(false);
-    if ("error" in result) {
-      setError(result.error);
-      notify(result.error, "error");
-      return;
-    }
-    notify(result.message, "success");
-    onChanged({
-      ...current,
-      status: "PEGO",
-      purchase: {
-        id: current.id,
-        numero_id: current.id,
-        aluno_id: current.aluno_id,
-        nome_comprador: String(formData.get("nome") ?? ""),
-        telefone: String(formData.get("telefone") ?? ""),
-        comprovante_url: "firestore",
-        valor: TICKET_PRICE,
+    try {
+      const result = await registerNumberAction(current.id, formData);
+      if ("error" in result) {
+        setError(result.error);
+        notify(result.error, "error");
+        return;
+      }
+      notify(result.message, "success");
+      onChanged({
+        ...current,
         status: "PEGO",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    });
-    onClose();
+        purchase: {
+          id: current.id,
+          numero_id: current.id,
+          aluno_id: current.aluno_id,
+          nome_comprador: String(formData.get("nome") ?? ""),
+          telefone: String(formData.get("telefone") ?? ""),
+          comprovante_url: "firestore",
+          valor: TICKET_PRICE,
+          status: "PEGO",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      });
+      onClose();
+    } catch (caught) {
+      const message = uploadActionErrorMessage(caught);
+      setError(message);
+      notify(message, "error");
+    } finally {
+      setPending(false);
+    }
   }
 
   async function onSave(formData: FormData) {
     setPending(true);
     setError(null);
-    const result = await updateNumberAction(current.id, formData);
-    setPending(false);
-    if ("error" in result) {
-      setError(result.error);
-      notify(result.error, "error");
-      return;
+    try {
+      const result = await updateNumberAction(current.id, formData);
+      if ("error" in result) {
+        setError(result.error);
+        notify(result.error, "error");
+        return;
+      }
+      notify("Alterações salvas com sucesso!", "success");
+      onChanged({
+        ...current,
+        purchase: purchase
+          ? {
+              ...purchase,
+              nome_comprador: String(formData.get("nome") ?? purchase.nome_comprador),
+              telefone: String(formData.get("telefone") ?? purchase.telefone),
+              updated_at: new Date().toISOString(),
+            }
+          : purchase,
+      });
+      onClose();
+    } catch (caught) {
+      const message = uploadActionErrorMessage(caught);
+      setError(message);
+      notify(message, "error");
+    } finally {
+      setPending(false);
     }
-    notify("Alterações salvas com sucesso!", "success");
-    onChanged({
-      ...current,
-      purchase: purchase
-        ? {
-            ...purchase,
-            nome_comprador: String(formData.get("nome") ?? purchase.nome_comprador),
-            telefone: String(formData.get("telefone") ?? purchase.telefone),
-            updated_at: new Date().toISOString(),
-          }
-        : purchase,
-    });
-    onClose();
   }
 
   async function onDelete() {
@@ -247,47 +263,11 @@ export function NumberRecordModal({
 
                   {canEdit ? (
                     <div className="mt-4">
-                      <p className="mb-1.5 text-sm font-semibold text-navy">
-                        Substituir comprovante (opcional)
-                      </p>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-full border border-navy/15 bg-white px-4 text-sm font-semibold">
-                          <Camera className="h-5 w-5" />
-                          Tirar foto
-                          <input
-                            type="file"
-                            name="comprovante_camera"
-                            accept="image/jpeg,image/png,image/webp,image/jpg"
-                            capture="environment"
-                            className="hidden"
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              if (!file) return;
-                              const transfer = new DataTransfer();
-                              transfer.items.add(file);
-                              const hidden = event.currentTarget
-                                .closest("form")
-                                ?.querySelector<HTMLInputElement>('input[name="comprovante"]');
-                              if (hidden) hidden.files = transfer.files;
-                              setFileName(file.name);
-                            }}
-                          />
-                        </label>
-                        <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-full border border-navy/15 bg-white px-4 text-sm font-semibold">
-                          <ImagePlus className="h-5 w-5" />
-                          Enviar arquivo
-                          <input
-                            type="file"
-                            name="comprovante"
-                            accept="image/jpeg,image/png,image/webp,image/jpg,.jpg,.jpeg,.png,.webp"
-                            className="sr-only"
-                            onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")}
-                          />
-                        </label>
-                      </div>
-                      {fileName ? (
-                        <p className="mt-2 text-sm font-semibold text-navy">Arquivo: {fileName}</p>
-                      ) : null}
+                      <ReceiptPicker
+                        disabled={pending}
+                        onBusyChange={setBusy}
+                        label="Substituir comprovante (opcional)"
+                      />
                     </div>
                   ) : null}
                 </div>
@@ -300,8 +280,8 @@ export function NumberRecordModal({
 
                 {canEdit ? (
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <Button type="submit" disabled={pending}>
-                      {pending ? "Salvando..." : "Concluído"}
+                    <Button type="submit" disabled={pending || busy}>
+                      {busy ? "Preparando foto..." : pending ? "Salvando..." : "Concluído"}
                     </Button>
                     <Button
                       type="button"
@@ -336,54 +316,18 @@ export function NumberRecordModal({
                       value={telefone}
                       onChange={(event) => setTelefone(formatPhone(event.target.value))}
                     />
-                    <div>
-                      <p className="mb-1.5 text-sm font-semibold text-navy">Comprovante de pagamento</p>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-full border border-navy/15 bg-white px-4 text-sm font-semibold">
-                          <Camera className="h-5 w-5" />
-                          Tirar foto
-                          <input
-                            type="file"
-                            name="comprovante_camera"
-                            accept="image/jpeg,image/png,image/webp,image/jpg"
-                            capture="environment"
-                            className="hidden"
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              if (!file) return;
-                              const transfer = new DataTransfer();
-                              transfer.items.add(file);
-                              const hidden = event.currentTarget
-                                .closest("form")
-                                ?.querySelector<HTMLInputElement>('input[name="comprovante"]');
-                              if (hidden) hidden.files = transfer.files;
-                              setFileName(file.name);
-                            }}
-                          />
-                        </label>
-                        <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-full border border-navy/15 bg-white px-4 text-sm font-semibold">
-                          <ImagePlus className="h-5 w-5" />
-                          Enviar arquivo
-                          <input
-                            type="file"
-                            name="comprovante"
-                            accept="image/jpeg,image/png,image/webp,image/jpg,.jpg,.jpeg,.png,.webp"
-                            className="sr-only"
-                            onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")}
-                          />
-                        </label>
-                      </div>
-                      {fileName ? (
-                        <p className="mt-2 text-sm font-semibold text-navy">Arquivo: {fileName}</p>
-                      ) : null}
-                    </div>
+                    <ReceiptPicker required disabled={pending} onBusyChange={setBusy} />
                     {error ? (
                       <p className="rounded-2xl bg-red/10 px-4 py-3 text-sm font-semibold text-red">
                         {error}
                       </p>
                     ) : null}
-                    <Button type="submit" className="w-full" size="xl" disabled={pending}>
-                      {pending ? "Enviando comprovante..." : "Registrar número"}
+                    <Button type="submit" className="w-full" size="xl" disabled={pending || busy}>
+                      {busy
+                        ? "Preparando foto..."
+                        : pending
+                          ? "Enviando comprovante..."
+                          : "Registrar número"}
                     </Button>
                   </form>
                 ) : null}

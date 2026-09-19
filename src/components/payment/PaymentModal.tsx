@@ -9,6 +9,7 @@ import { PixCard } from "@/components/payment/PixCard";
 import { BuyerForm } from "@/components/payment/BuyerForm";
 import { registerNumberAction } from "@/lib/actions/numbers";
 import { useToast } from "@/components/providers/ToastProvider";
+import { uploadActionErrorMessage } from "@/lib/receipt-image";
 
 type PaymentModalProps = {
   open: boolean;
@@ -51,15 +52,22 @@ export function PaymentModal({
   async function onSubmit(formData: FormData) {
     setPending(true);
     setError(null);
-    const result = await registerNumberAction(numeroId, formData);
-    setPending(false);
-    if ("error" in result) {
-      setError(result.error);
-      notify(result.error, "error");
-      return;
+    try {
+      const result = await registerNumberAction(numeroId, formData);
+      if ("error" in result) {
+        setError(result.error);
+        notify(result.error, "error");
+        return;
+      }
+      notify("✓ Número registrado com sucesso! 🇺🇸", "success");
+      onSuccess();
+    } catch (caught) {
+      const message = uploadActionErrorMessage(caught);
+      setError(message);
+      notify(message, "error");
+    } finally {
+      setPending(false);
     }
-    notify("✓ Número registrado com sucesso! 🇺🇸", "success");
-    onSuccess();
   }
 
   return (

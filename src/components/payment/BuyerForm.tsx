@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Camera, ImagePlus } from "lucide-react";
 import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
+import { ReceiptPicker } from "@/components/payment/ReceiptPicker";
 import { formatPhone } from "@/lib/format";
 
 type BuyerFormProps = {
@@ -13,7 +13,7 @@ type BuyerFormProps = {
 
 export function BuyerForm({ pending = false, error = null }: BuyerFormProps) {
   const [phone, setPhone] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [busy, setBusy] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -36,55 +36,14 @@ export function BuyerForm({ pending = false, error = null }: BuyerFormProps) {
         onChange={(event) => setPhone(formatPhone(event.target.value))}
       />
 
-      <div>
-        <p className="mb-1.5 text-sm font-semibold text-navy">Comprovante de pagamento</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-full border border-navy/15 bg-white px-4 text-sm font-semibold">
-            <Camera className="h-5 w-5" />
-            Tirar foto
-            <input
-              type="file"
-              name="comprovante_camera"
-              accept="image/jpeg,image/png,image/webp,image/jpg"
-              capture="environment"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (!file) return;
-                const transfer = new DataTransfer();
-                transfer.items.add(file);
-                const hidden = event.currentTarget
-                  .closest("form")
-                  ?.querySelector<HTMLInputElement>('input[name="comprovante"]');
-                if (hidden) hidden.files = transfer.files;
-                setFileName(file.name);
-              }}
-            />
-          </label>
-          <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-full border border-navy/15 bg-white px-4 text-sm font-semibold">
-            <ImagePlus className="h-5 w-5" />
-            Enviar arquivo
-            <input
-              type="file"
-              name="comprovante"
-              accept="image/jpeg,image/png,image/webp,image/jpg,.jpg,.jpeg,.png,.webp"
-              className="sr-only"
-              onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")}
-            />
-          </label>
-        </div>
-        <p className="mt-2 text-xs text-navy/60">JPG, JPEG, PNG, WebP</p>
-        {fileName ? (
-          <p className="mt-1 text-sm font-semibold text-navy">Arquivo: {fileName}</p>
-        ) : null}
-      </div>
+      <ReceiptPicker required disabled={pending} onBusyChange={setBusy} />
 
       {error ? (
         <p className="rounded-2xl bg-red/10 px-4 py-3 text-sm font-semibold text-red">{error}</p>
       ) : null}
 
-      <Button type="submit" className="w-full" size="xl" disabled={pending}>
-        {pending ? "Enviando comprovante..." : "Registrar número"}
+      <Button type="submit" className="w-full" size="xl" disabled={pending || busy}>
+        {busy ? "Preparando foto..." : pending ? "Enviando comprovante..." : "Registrar número"}
       </Button>
     </div>
   );
