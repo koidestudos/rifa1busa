@@ -29,7 +29,7 @@ export const PRIZES = [
   {
     place: 1,
     title: "1º Lugar",
-    description: "2 vales de rodízio de pizza",
+    description: "Rodízio Geral (Contém pizzas, comidas, churrascos etc.)",
     kind: "photo",
     image: "/premios/pizza.jpg",
   },

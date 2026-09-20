@@ -44,7 +44,7 @@ export function PrizePanel({ compact = false }: { compact?: boolean }) {
                 {MEDALS[index]}{" "}
                 <span className="font-display text-xl tracking-[0.06em] text-navy">{prize.title}</span>
               </p>
-              <p className="mt-1 text-xs font-semibold leading-4 text-navy/70">{prize.description}</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-navy/70">{prize.description}</p>
             </div>
           </article>
         ))}
