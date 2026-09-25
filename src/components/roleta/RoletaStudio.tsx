@@ -224,11 +224,7 @@ export function RoletaStudio({
     notify("Sorteios resetados. Os números podem participar de novo.", "success");
   }
 
-  const backgroundStyle = settings.gradient
-    ? {
-        backgroundImage: `radial-gradient(circle at 50% 28%, ${bg.from}, ${bg.solid} 46%, ${bg.to})`,
-      }
-    : { background: bg.solid };
+  const backgroundStyle = { backgroundColor: bg.solid };
 
   const busy = spinning || pending;
   const textClass = light ? "text-navy" : "text-white";
@@ -242,7 +238,6 @@ export function RoletaStudio({
       )}
       style={backgroundStyle}
     >
-      <div className="pointer-events-none absolute inset-0 opacity-40 mix-blend-overlay star-field" />
 
       {settings.testMode ? (
         <div className="absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-full bg-amber-300 px-4 py-1 text-xs font-black uppercase tracking-[0.2em] text-navy-deep shadow-lg">
@@ -265,6 +260,15 @@ export function RoletaStudio({
       ) : null}
 
       <div className="absolute right-4 top-4 z-30 flex flex-wrap items-center gap-2">
+        {!settings.showHistory ? (
+          <button
+            type="button"
+            onClick={() => patch({ showHistory: true })}
+            className="rounded-full bg-black/25 px-3 py-2 text-xs font-black uppercase tracking-wide backdrop-blur"
+          >
+            Histórico
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => patch({ sound: !settings.sound })}
@@ -316,6 +320,7 @@ export function RoletaStudio({
                 spinning={busy}
                 onClear={() => setConfirm("clear")}
                 onReset={() => setConfirm("reset1")}
+                onClose={() => patch({ showHistory: false })}
                 isSuperAdmin={isSuperAdmin && !settings.broadcast}
               />
             </div>
@@ -324,7 +329,6 @@ export function RoletaStudio({
           <RoletaWheel
             numbers={orderedNumbers}
             rotation={rotation}
-            spinning={busy}
             background={settings.background}
           />
         </div>
@@ -402,6 +406,7 @@ export function RoletaStudio({
             spinning={busy}
             onClear={() => setConfirm("clear")}
             onReset={() => setConfirm("reset1")}
+            onClose={() => patch({ showHistory: false })}
             isSuperAdmin={isSuperAdmin && !settings.broadcast}
           />
         </div>

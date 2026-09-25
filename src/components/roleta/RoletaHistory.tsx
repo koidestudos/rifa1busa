@@ -13,6 +13,7 @@ export function RoletaHistory({
   spinning,
   onClear,
   onReset,
+  onClose,
   isSuperAdmin,
 }: {
   history: SorteioRecord[];
@@ -22,6 +23,7 @@ export function RoletaHistory({
   spinning: boolean;
   onClear: () => void;
   onReset: () => void;
+  onClose: () => void;
   isSuperAdmin: boolean;
 }) {
   return (
@@ -34,16 +36,29 @@ export function RoletaHistory({
     >
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-display text-2xl tracking-[0.12em]">Histórico</h2>
-        {canManage ? (
+        <div className="flex items-center gap-1">
+          {canManage ? (
+            <button
+              type="button"
+              disabled={spinning}
+              onClick={onClear}
+              className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-wide disabled:opacity-40"
+            >
+              🗑️ Apagar
+            </button>
+          ) : null}
           <button
             type="button"
-            disabled={spinning}
-            onClick={onClear}
-            className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-wide disabled:opacity-40"
+            onClick={onClose}
+            aria-label="Fechar histórico"
+            className={cn(
+              "grid h-8 w-8 place-items-center rounded-full text-sm font-black",
+              light ? "bg-navy/10 text-navy" : "bg-white/15 text-white",
+            )}
           >
-            🗑️ Apagar
+            ✕
           </button>
-        ) : null}
+        </div>
       </div>
       <ol className="mt-3 space-y-2">
         {history.length === 0 ? (

@@ -43,7 +43,9 @@ export function RoletaSettingsPanel({
       </div>
 
       <section className="mt-5 space-y-3">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-white/50">Cor do fundo</p>
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-white/50">
+          Cor do fundo — sólida, sem gradiente
+        </p>
         <div className="grid grid-cols-3 gap-2">
           {ROLETA_BACKGROUNDS.map((bg) => (
             <button
@@ -63,11 +65,6 @@ export function RoletaSettingsPanel({
         </div>
       </section>
 
-      <Toggle
-        label="Fundo gradiente"
-        checked={settings.gradient}
-        onChange={(gradient) => onPatch({ gradient })}
-      />
       <Toggle
         label="🔊 Sons"
         checked={settings.sound}
