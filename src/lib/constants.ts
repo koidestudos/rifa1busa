@@ -63,6 +63,18 @@ export const PRIZES = [
   },
 ] as const;
 
+export const PRIZE_BADGES: Record<number, string> = {
+  1: "🥇",
+  2: "🥈",
+  3: "🥉",
+  4: "🏆",
+  5: "💵",
+};
+
+export function prizeByPlace(place: number) {
+  return PRIZES.find((prize) => prize.place === place) ?? PRIZES[0];
+}
+
 export const HOW_TO_STEPS = [
   "Escolha um número disponível",
   "Faça o PIX de R$ 5,00",

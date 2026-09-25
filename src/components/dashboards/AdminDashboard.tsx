@@ -32,6 +32,17 @@ export function AdminDashboard({
 
   return (
     <div className="space-y-6">
+      <Link
+        href="/admin/roleta"
+        className="block overflow-hidden rounded-3xl bg-gradient-to-r from-navy-deep via-navy to-red p-5 text-white shadow-[0_12px_30px_rgba(6,28,58,0.16)]"
+      >
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-300">Sorteio ao vivo</p>
+        <p className="mt-1 font-display text-4xl tracking-[0.1em]">Roleta</p>
+        <p className="mt-1 max-w-xl text-sm font-semibold text-white/80">
+          Tela profissional para o OBS Studio, com giro, prêmios, histórico e números PEGO do banco.
+        </p>
+        <p className="mt-3 text-sm font-black uppercase tracking-wide text-amber-300">Abrir roleta →</p>
+      </Link>
       <section className="overflow-hidden rounded-3xl bg-white shadow-[0_12px_30px_rgba(6,28,58,0.06)]">
         <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

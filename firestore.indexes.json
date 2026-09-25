@@ -7,6 +7,13 @@
         { "fieldPath": "alunoId", "order": "ASCENDING" },
         { "fieldPath": "numero", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "sorteios",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdAtMs", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

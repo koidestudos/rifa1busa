@@ -4,6 +4,8 @@ import type {
   Profile,
   Purchase,
   RaffleNumber,
+  RoletaNumber,
+  SorteioRecord,
   UserRole,
 } from "@/lib/types";
 
@@ -26,8 +28,25 @@ export type NumeroDoc = {
   alunoNome: string;
   alunoLogin: string;
   status: NumberStatus;
+  sorteado?: boolean;
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
+};
+
+export type SorteioDoc = {
+  numero: number;
+  numeroId: string;
+  compradorNome: string;
+  alunoId: string;
+  premioPlace: number;
+  premioTitle: string;
+  premioDescription: string;
+  soldOnly: boolean;
+  modoTeste: boolean;
+  createdBy: string;
+  createdByNome?: string;
+  createdAt: Timestamp | Date | string;
+  createdAtMs: number;
 };
 
 export type RegistroDoc = {
@@ -80,8 +99,41 @@ export function mapNumero(id: string, data: NumeroDoc): RaffleNumber {
     numero: data.numero,
     aluno_id: data.alunoId,
     status: data.status,
+    sorteado: Boolean(data.sorteado),
     created_at: toIso(data.createdAt),
     updated_at: toIso(data.updatedAt),
+  };
+}
+
+export function mapRoletaNumber(
+  id: string,
+  data: NumeroDoc,
+  compradorNome: string | null,
+): RoletaNumber {
+  const purchaseName = compradorNome?.trim() || null;
+  return {
+    id,
+    numero: data.numero,
+    status: data.status,
+    sorteado: Boolean(data.sorteado),
+    comprador_nome: data.status === "PEGO" ? purchaseName : null,
+  };
+}
+
+export function mapSorteio(id: string, data: SorteioDoc): SorteioRecord {
+  return {
+    id,
+    numero: data.numero,
+    numero_id: data.numeroId,
+    comprador_nome: data.compradorNome,
+    aluno_id: data.alunoId,
+    premio_place: data.premioPlace,
+    premio_title: data.premioTitle,
+    premio_description: data.premioDescription,
+    sold_only: Boolean(data.soldOnly),
+    modo_teste: Boolean(data.modoTeste),
+    created_at: toIso(data.createdAt),
+    created_by: data.createdBy,
   };
 }
 

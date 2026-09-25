@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 export function AdminNav({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
   const pathname = usePathname();
   const links = [
+    { href: "/admin/roleta", label: "Roleta", match: (path: string) => path.startsWith("/admin/roleta") },
     { href: "/admin", label: "Dashboard", match: (path: string) => path === "/admin" || path.startsWith("/admin/alunos") },
     { href: "/admin/numeros", label: "Números", match: (path: string) => path.startsWith("/admin/numeros") },
     ...(isSuperAdmin

@@ -161,3 +161,25 @@ body.rifa-print-mode .bottom-nav {
 body.rifa-print-mode .print-stage {
   overflow-x: hidden;
 }
+
+html.roleta-live,
+body.roleta-live {
+  height: 100%;
+  overflow: hidden;
+  background: #061428;
+}
+
+@keyframes roleta-result-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.86) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.roleta-result-pop {
+  animation: roleta-result-pop 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
