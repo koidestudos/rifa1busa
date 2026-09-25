@@ -9,11 +9,14 @@ import {
   type ProfileDoc,
   type RegistroDoc,
 } from "@/lib/firebase/mappers";
+import { listRoletaNumbers, listSorteios } from "@/lib/firebase/sorteios";
 import { filterByAllowedStudentIds } from "@/lib/permissions";
 import type {
   NumberWithOwner,
   Profile,
   RaffleStats,
+  RoletaNumber,
+  SorteioRecord,
   StudentProgress,
 } from "@/lib/types";
 import { hasEnteredSite } from "@/lib/types";
@@ -208,4 +211,14 @@ export async function getProfileById(id: string): Promise<Profile | null> {
   const snap = await adminDb().collection("profiles").doc(id).get();
   if (!snap.exists) return null;
   return mapProfile(snap.id, snap.data() as ProfileDoc);
+}
+
+export async function getSorteioHistory(): Promise<SorteioRecord[]> {
+  if (!isFirebaseConfigured()) return [];
+  return listSorteios();
+}
+
+export async function getRoletaNumbers(): Promise<RoletaNumber[]> {
+  if (!isFirebaseConfigured()) return [];
+  return listRoletaNumbers();
 }

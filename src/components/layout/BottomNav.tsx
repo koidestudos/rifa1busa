@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Hash, Home, LayoutDashboard, LayoutGrid, Shield } from "lucide-react";
+import { Dices, Hash, Home, LayoutDashboard, LayoutGrid, Shield } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 function NavBar({
@@ -52,6 +52,7 @@ export function StudentBottomNav({ isStaff = false }: { isStaff?: boolean }) {
 
 export function AdminBottomNav({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
   const items = [
+    { href: "/admin/roleta", label: "Roleta", icon: Dices, exact: true },
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { href: "/admin/numeros", label: "Números", icon: Hash, exact: true },
     ...(isSuperAdmin

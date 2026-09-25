@@ -36,3 +36,7 @@ export function progressPercent(sold: number, total: number) {
   if (total <= 0) return 0;
   return Math.round((sold / total) * 100);
 }
+
+export function formatRaffleNumber(numero: number) {
+  return String(numero).padStart(3, "0");
+}

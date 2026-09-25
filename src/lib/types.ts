@@ -21,8 +21,32 @@ export type RaffleNumber = {
   numero: number;
   aluno_id: string;
   status: NumberStatus;
+  sorteado: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type RoletaNumber = {
+  id: string;
+  numero: number;
+  status: NumberStatus;
+  sorteado: boolean;
+  comprador_nome: string | null;
+};
+
+export type SorteioRecord = {
+  id: string;
+  numero: number;
+  numero_id: string;
+  comprador_nome: string;
+  aluno_id: string;
+  premio_place: number;
+  premio_title: string;
+  premio_description: string;
+  sold_only: boolean;
+  modo_teste: boolean;
+  created_at: string;
+  created_by: string;
 };
 
 export type Purchase = {

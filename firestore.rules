@@ -26,8 +26,20 @@ rules_version = '2';
 //   - alunoNome: string (denormalized, not buyer PII)
 //   - alunoLogin: string
 //   - status: DISPONIVEL | PEGO
+//   - sorteado: bool (optional, default false) — drawn on the live wheel
 //   - createdAt: timestamp (immutable)
 //   - updatedAt: timestamp
+//
+// Collection: sorteios
+// Document ID: auto
+// Fields:
+//   - numero, numeroId, compradorNome (name at draw time), alunoId
+//   - premioPlace, premioTitle, premioDescription
+//   - soldOnly, modoTeste, createdBy, createdAt, createdAtMs
+// Draw history only. Resetting clears this and sorteado; never sales/registros.
+//
+// Collection: sorteio_meta
+// Document ID: "lock" — lastDrawAtMs cooldown to prevent concurrent draws.
 //
 // Collection: registros
 // Document ID: same as numero document ID (1:1 uniqueness)
@@ -117,17 +129,37 @@ service cloud.firestore {
     }
 
     function isValidNumero(data) {
-      return data.keys().hasOnly([
+      return (data.keys().hasOnly([
           'numero', 'alunoId', 'alunoNome', 'alunoLogin',
           'status', 'createdAt', 'updatedAt'
-        ]) &&
+        ]) || data.keys().hasOnly([
+          'numero', 'alunoId', 'alunoNome', 'alunoLogin',
+          'status', 'sorteado', 'createdAt', 'updatedAt'
+        ])) &&
         data.numero is int && data.numero >= 1 && data.numero <= 435 &&
         data.alunoId is string && data.alunoId.size() > 0 && data.alunoId.size() <= 128 &&
         data.alunoNome is string && data.alunoNome.size() <= 80 &&
         data.alunoLogin is string && data.alunoLogin.size() <= 80 &&
         data.status in ['DISPONIVEL', 'PEGO'] &&
+        (!('sorteado' in data) || data.sorteado is bool) &&
         data.createdAt is timestamp &&
         data.updatedAt is timestamp;
+    }
+
+    function isValidSorteio(data) {
+      return data.keys().hasOnly([
+          'numero', 'numeroId', 'compradorNome', 'alunoId',
+          'premioPlace', 'premioTitle', 'premioDescription',
+          'soldOnly', 'modoTeste', 'createdBy', 'createdByNome',
+          'createdAt', 'createdAtMs'
+        ]) &&
+        data.numero is int && data.numero >= 1 && data.numero <= 435 &&
+        data.numeroId is string && data.compradorNome is string &&
+        data.alunoId is string &&
+        data.premioPlace is int && data.premioPlace >= 1 && data.premioPlace <= 5 &&
+        data.soldOnly is bool && data.modoTeste is bool &&
+        data.createdBy is string && data.createdAt is timestamp &&
+        data.createdAtMs is int;
     }
 
     function isValidRegistro(data) {
@@ -249,6 +281,17 @@ service cloud.firestore {
       allow create: if isValidPermission(request.resource.data) && false;
       allow update: if false;
       allow delete: if false;
+    }
+
+    match /sorteios/{id} {
+      allow read: if isStaff();
+      allow create: if isValidSorteio(request.resource.data) && false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /sorteio_meta/{id} {
+      allow read, write: if false;
     }
 
     match /{document=**} {

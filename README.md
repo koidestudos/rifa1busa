@@ -37,11 +37,13 @@ As regras em `firestore.rules` são um protótipo para revisão: o cliente não 
 Não há SQL. O seed cria:
 
 - `profiles/{uid}` — nome, login, e-mail interno, cargo, troca de senha, primeiro e último acesso
-- `numeros/{1..435}` — dono, status DISPONÍVEL/PEGO
+- `numeros/{1..435}` — dono, status DISPONÍVEL/PEGO, flag `sorteado` da roleta
 - `registros/{numero}` — 1:1 com o número (comprador, telefone)
 - `comprovantes/{numero}` — foto do comprovante (em pedaços, por causa do limite de 1 MB do documento)
 - `stats/public` — totais da home (sem dados pessoais)
 - `admin_student_permissions/{adminId}_{studentId}` — quais alunos cada ADMIN pode ver (o SUPER ADMIN vê todos)
+- `sorteios/{id}` — histórico dos sorteios da roleta (número, nome no momento do sorteio, prêmio)
+- `sorteio_meta/lock` — trava para não sortear duas vezes ao mesmo tempo
 
 ## 4. Como publicar regras e índices
 
@@ -166,6 +168,7 @@ Depois do deploy:
 - O SUPER ADMIN vê a rifa inteira; as permissões dos outros admins não o limitam.
 - Administradores comuns **não** criam outro SUPER ADMIN nem alteram permissões.
 - O registro do número usa transação no Firestore: status `DISPONIVEL` + documento `registros/{numero}` criado com `create`. Duas vendas do mesmo número ao mesmo tempo: só uma entra.
+- A roleta (`/admin/roleta`) só é acessível por ADMIN/SUPER ADMIN. O número sorteado é escolhido no servidor; a marcação `sorteado` impede repetição. Apagar o histórico não devolve o número à roleta. Resetar sorteios (SUPER ADMIN) apaga o histórico e limpa `sorteado`, sem mexer em vendas, compradores ou alunos.
 
 ## PIX
 
@@ -176,9 +179,9 @@ O QR do PIX fica em `public/pix-qr.png`.
 ## Estrutura
 
 ```text
-src/app              rotas (home, login, painel, admin)
-src/components       Navbar, NumberBall, PaymentModal, painéis...
-src/lib/actions      server actions (auth, registro, admin)
+src/app              rotas (home, login, painel, admin, roleta)
+src/components       Navbar, NumberBall, PaymentModal, Roleta, painéis...
+src/lib/actions      server actions (auth, registro, admin, sorteios)
 src/lib/firebase     Admin SDK, sessão, transações
 firestore.rules      regras do Firestore
 scripts/seed.mjs     Auth + perfis + 435 números
