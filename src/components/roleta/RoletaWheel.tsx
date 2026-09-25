@@ -13,7 +13,6 @@ import { cn } from "@/lib/cn";
 type RoletaWheelProps = {
   numbers: RoletaNumber[];
   rotation: number;
-  spinning: boolean;
   background: RoletaBackgroundId;
   className?: string;
 };
@@ -21,7 +20,6 @@ type RoletaWheelProps = {
 export function RoletaWheel({
   numbers,
   rotation,
-  spinning,
   background,
   className,
 }: RoletaWheelProps) {
@@ -144,34 +142,12 @@ export function RoletaWheel({
   }, []);
 
   useEffect(() => {
-    if (!spinning) {
-      drawRef.current();
-      return;
-    }
-    let raf = 0;
-    const loop = () => {
-      drawRef.current();
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [spinning]);
-
-  useEffect(() => {
-    if (!spinning) drawRef.current();
-  }, [rotation, numbers, light, spinning]);
+    drawRef.current();
+  }, [rotation, numbers, light]);
 
   return (
     <div ref={wrapRef} className={cn("relative aspect-square w-full max-w-[min(78vh,720px)]", className)}>
-      <div
-        className="absolute inset-[-8%] rounded-full opacity-70 blur-3xl"
-        style={{
-          background: spinning
-            ? "radial-gradient(circle, rgba(212,160,23,0.45), transparent 62%)"
-            : "radial-gradient(circle, rgba(212,160,23,0.22), transparent 64%)",
-        }}
-      />
-      <canvas ref={canvasRef} className="relative z-10 h-full w-full drop-shadow-[0_20px_50px_rgba(0,0,0,0.35)]" />
+      <canvas ref={canvasRef} className="relative z-10 h-full w-full" />
       <div className="pointer-events-none absolute left-1/2 top-[1.5%] z-20 -translate-x-1/2">
         <div className="h-0 w-0 border-l-[14px] border-r-[14px] border-t-[28px] border-l-transparent border-r-transparent border-t-amber-300 drop-shadow-[0_6px_10px_rgba(0,0,0,0.45)]" />
       </div>

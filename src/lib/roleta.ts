@@ -1,66 +1,23 @@
 import { PRIZE_BADGES, PRIZES } from "@/lib/constants";
 import type { RoletaNumber } from "@/lib/types";
 
-export const ROLETA_STORAGE_KEY = "rifa-roleta-settings-v1";
+export const ROLETA_STORAGE_KEY = "rifa-roleta-settings-v2";
 export const DRAW_COOLDOWN_MS = 4000;
 export const DEFAULT_SPIN_MS = 5500;
 
 export const ROLETA_BACKGROUNDS = [
-  {
-    id: "green",
-    label: "Verde",
-    emoji: "🟢",
-    solid: "#00B140",
-    from: "#1cff73",
-    to: "#067a38",
-  },
-  {
-    id: "blue",
-    label: "Azul",
-    emoji: "🔵",
-    solid: "#0A3161",
-    from: "#2b7de0",
-    to: "#061428",
-  },
-  {
-    id: "purple",
-    label: "Roxo",
-    emoji: "🟣",
-    solid: "#4c1d95",
-    from: "#8b5cf6",
-    to: "#2e1065",
-  },
-  {
-    id: "red",
-    label: "Vermelho",
-    emoji: "🔴",
-    solid: "#9b0826",
-    from: "#ef4444",
-    to: "#4a0412",
-  },
-  {
-    id: "black",
-    label: "Preto",
-    emoji: "⚫",
-    solid: "#0a0a0a",
-    from: "#3f3f46",
-    to: "#000000",
-  },
-  {
-    id: "white",
-    label: "Branco",
-    emoji: "⚪",
-    solid: "#f4f4f5",
-    from: "#ffffff",
-    to: "#d4d4d8",
-  },
+  { id: "green", label: "Verde", emoji: "🟢", solid: "#00FF00" },
+  { id: "blue", label: "Azul", emoji: "🔵", solid: "#0A3161" },
+  { id: "purple", label: "Roxo", emoji: "🟣", solid: "#4c1d95" },
+  { id: "red", label: "Vermelho", emoji: "🔴", solid: "#BF0A30" },
+  { id: "black", label: "Preto", emoji: "⚫", solid: "#000000" },
+  { id: "white", label: "Branco", emoji: "⚪", solid: "#FFFFFF" },
 ] as const;
 
 export type RoletaBackgroundId = (typeof ROLETA_BACKGROUNDS)[number]["id"];
 
 export type RoletaSettings = {
   background: RoletaBackgroundId;
-  gradient: boolean;
   sound: boolean;
   confetti: boolean;
   durationMs: number;
@@ -72,8 +29,7 @@ export type RoletaSettings = {
 };
 
 export const DEFAULT_ROLETA_SETTINGS: RoletaSettings = {
-  background: "blue",
-  gradient: true,
+  background: "green",
   sound: true,
   confetti: true,
   durationMs: DEFAULT_SPIN_MS,
@@ -85,7 +41,7 @@ export const DEFAULT_ROLETA_SETTINGS: RoletaSettings = {
 };
 
 export function isLightRoletaBackground(id: RoletaBackgroundId) {
-  return id === "white";
+  return id === "white" || id === "green";
 }
 
 export function roletaBackground(id: RoletaBackgroundId) {
@@ -156,7 +112,6 @@ export function parseRoletaSettings(raw: unknown): RoletaSettings {
 
   return {
     background,
-    gradient: data.gradient !== false,
     sound: data.sound !== false,
     confetti: data.confetti !== false,
     durationMs: [3500, 4500, 5500, 7000, 9000, 11000].includes(durationMs)
