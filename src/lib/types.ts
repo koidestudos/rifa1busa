@@ -29,8 +29,12 @@ export type RaffleNumber = {
 export type RoletaNumber = {
   id: string;
   numero: number;
+  aluno_id: string;
+  aluno_nome: string;
   status: NumberStatus;
   sorteado: boolean;
+  /** Dono já eliminado, ou este número já foi o sorteado. Fora dos próximos giros. */
+  bloqueado: boolean;
   comprador_nome: string | null;
 };
 
@@ -40,6 +44,8 @@ export type SorteioRecord = {
   numero_id: string;
   comprador_nome: string;
   aluno_id: string;
+  aluno_nome: string;
+  numeros_bloqueados: number[];
   premio_place: number;
   premio_title: string;
   premio_description: string;

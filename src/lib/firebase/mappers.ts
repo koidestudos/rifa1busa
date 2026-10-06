@@ -38,6 +38,8 @@ export type SorteioDoc = {
   numeroId: string;
   compradorNome: string;
   alunoId: string;
+  alunoNome?: string;
+  numerosBloqueados?: number[];
   premioPlace: number;
   premioTitle: string;
   premioDescription: string;
@@ -109,24 +111,42 @@ export function mapRoletaNumber(
   id: string,
   data: NumeroDoc,
   compradorNome: string | null,
+  bloqueado: boolean,
 ): RoletaNumber {
   const purchaseName = compradorNome?.trim() || null;
   return {
     id,
     numero: data.numero,
+    aluno_id: data.alunoId,
+    aluno_nome: data.alunoNome?.trim() || "Responsável",
     status: data.status,
     sorteado: Boolean(data.sorteado),
+    bloqueado,
     comprador_nome: data.status === "PEGO" ? purchaseName : null,
   };
 }
 
-export function mapSorteio(id: string, data: SorteioDoc): SorteioRecord {
+export function mapSorteio(
+  id: string,
+  data: SorteioDoc,
+  fallback?: { alunoNome?: string; numerosBloqueados?: number[] },
+): SorteioRecord {
+  const stored = Array.isArray(data.numerosBloqueados)
+    ? data.numerosBloqueados.filter((value) => Number.isInteger(value))
+    : [];
+  const blocked = (stored.length > 0 ? stored : (fallback?.numerosBloqueados ?? []))
+    .slice()
+    .sort((a, b) => a - b);
+  const alunoNome = (data.alunoNome || fallback?.alunoNome || "").trim();
+
   return {
     id,
     numero: data.numero,
     numero_id: data.numeroId,
     comprador_nome: data.compradorNome,
     aluno_id: data.alunoId,
+    aluno_nome: alunoNome || "Responsável",
+    numeros_bloqueados: blocked,
     premio_place: data.premioPlace,
     premio_title: data.premioTitle,
     premio_description: data.premioDescription,

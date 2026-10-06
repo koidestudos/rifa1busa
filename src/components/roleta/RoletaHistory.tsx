@@ -1,7 +1,7 @@
 "use client";
 
 import { formatRaffleNumber } from "@/lib/format";
-import { prizeMeta } from "@/lib/roleta";
+import { formatBlockedRanges, prizeMeta } from "@/lib/roleta";
 import type { SorteioRecord } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
@@ -70,6 +70,11 @@ export function RoletaHistory({
               <li key={item.id} className="rounded-2xl bg-white/10 px-3 py-2 text-sm font-bold">
                 <span className="mr-2">{prize.badge}</span>
                 Nº {formatRaffleNumber(item.numero)} — {item.comprador_nome}
+                <p className="mt-1 text-[11px] font-semibold leading-snug opacity-80">
+                  Responsável: {item.aluno_nome}
+                  <br />
+                  Bloqueados: {formatBlockedRanges(item.numeros_bloqueados)}
+                </p>
               </li>
             );
           })

@@ -170,7 +170,7 @@ export function RoletaWheel({
 
 function sliceFill(item: RoletaNumber | undefined, index: number, light: boolean) {
   if (!item) return "#1e4e8c";
-  if (item.sorteado) return index % 2 === 0 ? "#27272a" : "#3f3f46";
+  if (item.sorteado || item.bloqueado) return index % 2 === 0 ? "#27272a" : "#3f3f46";
   if (item.status === "PEGO") return index % 2 === 0 ? "#bf0a30" : "#f2e6c9";
   if (light) return index % 2 === 0 ? "#dbe7f5" : "#f8fafc";
   return index % 2 === 0 ? "#0a3161" : "#1e5aa8";
