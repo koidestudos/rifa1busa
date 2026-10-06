@@ -10,7 +10,7 @@ import {
   type RegistroDoc,
   type SorteioDoc,
 } from "@/lib/firebase/mappers";
-import { DRAW_COOLDOWN_MS } from "@/lib/roleta";
+import { DRAW_COOLDOWN_MS, eliminatedOwnerIds, isOwnerBlocked } from "@/lib/roleta";
 import type { RoletaNumber, SorteioRecord } from "@/lib/types";
 
 const SORTEIOS = "sorteios";
@@ -38,10 +38,38 @@ function prizeOrThrow(place: number) {
   return prize;
 }
 
-function isEligible(numero: NumeroDoc, registro: RegistroDoc | undefined, soldOnly: boolean) {
-  if (Boolean(numero.sorteado)) return false;
+class StaleDrawError extends RaffleError {
+  constructor(readonly alunoId: string) {
+    super("conflict", "Este número acabou de sair do sorteio.");
+  }
+}
+
+function eliminatedAlunoIds(docs: Array<{ data: () => NumeroDoc }>) {
+  return eliminatedOwnerIds(
+    docs.map((doc) => {
+      const numero = doc.data();
+      return { ownerId: numero.alunoId, drawn: Boolean(numero.sorteado) };
+    }),
+  );
+}
+
+function isEligible(
+  numero: NumeroDoc,
+  registro: RegistroDoc | undefined,
+  soldOnly: boolean,
+  eliminated: Set<string>,
+) {
+  if (isOwnerBlocked(numero.alunoId, Boolean(numero.sorteado), eliminated)) return false;
   if (!soldOnly) return true;
   return numero.status === "PEGO" && registro?.status === "PEGO";
+}
+
+function blockedNumbersFor(ownerId: string, docs: Array<{ data: () => NumeroDoc }>) {
+  const numbers = docs
+    .map((doc) => doc.data())
+    .filter((numero) => numero.alunoId === ownerId)
+    .map((numero) => numero.numero);
+  return [...new Set(numbers)].sort((a, b) => a - b);
 }
 
 async function commitChunks(ops: Array<(batch: WriteBatch) => void>) {
@@ -53,9 +81,37 @@ async function commitChunks(ops: Array<(batch: WriteBatch) => void>) {
   }
 }
 
+function ownerDirectory(docs: Array<{ data: () => NumeroDoc }>) {
+  const byOwner = new Map<string, { nome: string; numeros: number[] }>();
+  for (const doc of docs) {
+    const numero = doc.data();
+    if (!numero.alunoId) continue;
+    const current = byOwner.get(numero.alunoId) ?? { nome: "", numeros: [] };
+    if (!current.nome && numero.alunoNome?.trim()) current.nome = numero.alunoNome.trim();
+    current.numeros.push(numero.numero);
+    byOwner.set(numero.alunoId, current);
+  }
+  for (const group of byOwner.values()) {
+    group.numeros = [...new Set(group.numeros)].sort((a, b) => a - b);
+  }
+  return byOwner;
+}
+
 export async function listSorteios(): Promise<SorteioRecord[]> {
-  const snap = await adminDb().collection(SORTEIOS).orderBy("createdAtMs", "desc").get();
-  return snap.docs.map((doc) => mapSorteio(doc.id, doc.data() as SorteioDoc));
+  const [snap, numerosSnap] = await Promise.all([
+    adminDb().collection(SORTEIOS).orderBy("createdAtMs", "desc").get(),
+    adminDb().collection("numeros").get(),
+  ]);
+  const owners = ownerDirectory(numerosSnap.docs.map((doc) => ({ data: () => doc.data() as NumeroDoc })));
+
+  return snap.docs.map((doc) => {
+    const data = doc.data() as SorteioDoc;
+    const owner = owners.get(data.alunoId);
+    return mapSorteio(doc.id, data, {
+      alunoNome: owner?.nome,
+      numerosBloqueados: owner?.numeros,
+    });
+  });
 }
 
 export async function listRoletaNumbers(): Promise<RoletaNumber[]> {
@@ -67,13 +123,17 @@ export async function listRoletaNumbers(): Promise<RoletaNumber[]> {
   const registros = new Map(
     registrosSnap.docs.map((doc) => [doc.id, doc.data() as RegistroDoc]),
   );
+  const eliminated = eliminatedAlunoIds(
+    numerosSnap.docs.map((doc) => ({ data: () => doc.data() as NumeroDoc })),
+  );
 
   return numerosSnap.docs.map((doc) => {
     const data = doc.data() as NumeroDoc;
     const registro = registros.get(doc.id);
     const comprador =
       registro?.status === "PEGO" ? registro.nomeComprador : null;
-    return mapRoletaNumber(doc.id, data, comprador);
+    const bloqueado = isOwnerBlocked(data.alunoId, Boolean(data.sorteado), eliminated);
+    return mapRoletaNumber(doc.id, data, comprador, bloqueado);
   });
 }
 
@@ -89,10 +149,12 @@ export async function performDraw(input: DrawInput): Promise<SorteioRecord> {
   const registros = new Map(
     registrosSnap.docs.map((doc) => [doc.id, doc.data() as RegistroDoc]),
   );
+  const numeroDocs = numerosSnap.docs.map((doc) => ({ data: () => doc.data() as NumeroDoc }));
+  const eliminated = eliminatedAlunoIds(numeroDocs);
 
   const eligible = numerosSnap.docs.filter((doc) => {
     const numero = doc.data() as NumeroDoc;
-    return isEligible(numero, registros.get(doc.id), input.soldOnly);
+    return isEligible(numero, registros.get(doc.id), input.soldOnly, eliminated);
   });
 
   if (eligible.length === 0) {
@@ -111,7 +173,7 @@ export async function performDraw(input: DrawInput): Promise<SorteioRecord> {
     const remaining = numerosSnap.docs.filter((doc) => {
       if (skipped.has(doc.id)) return false;
       const numero = doc.data() as NumeroDoc;
-      return isEligible(numero, registros.get(doc.id), input.soldOnly);
+      return isEligible(numero, registros.get(doc.id), input.soldOnly, eliminated);
     });
     if (remaining.length === 0) {
       throw new RaffleError(
@@ -157,10 +219,36 @@ export async function performDraw(input: DrawInput): Promise<SorteioRecord> {
           ? (registroSnap.data() as RegistroDoc)
           : undefined;
 
-        if (!isEligible(numero, registro, input.soldOnly)) {
+        if (numero.sorteado) {
+          throw new StaleDrawError(numero.alunoId || "");
+        }
+        if (!isEligible(numero, registro, input.soldOnly, new Set())) {
           throw new RaffleError("conflict", "Este número acabou de sair do sorteio.");
         }
 
+        let blockedNumbers = blockedNumbersFor(numero.alunoId, numeroDocs);
+        if (numero.alunoId) {
+          const siblingsSnap = await tx.get(
+            db.collection("numeros").where("alunoId", "==", numero.alunoId),
+          );
+          const freshBlocked = siblingsSnap.docs
+            .map((doc) => doc.data() as NumeroDoc)
+            .map((row) => row.numero);
+          if (freshBlocked.length > 0) {
+            blockedNumbers = [...new Set(freshBlocked)].sort((a, b) => a - b);
+          }
+          const ownerAlreadyOut = siblingsSnap.docs.some((doc) =>
+            Boolean((doc.data() as NumeroDoc).sorteado),
+          );
+          if (ownerAlreadyOut) {
+            throw new StaleDrawError(numero.alunoId);
+          }
+        }
+        if (!blockedNumbers.includes(numero.numero)) {
+          blockedNumbers = [...blockedNumbers, numero.numero].sort((a, b) => a - b);
+        }
+
+        const alunoNome = numero.alunoNome?.trim() || "Responsável";
         const nowMs = Date.now();
         const now = FieldValue.serverTimestamp();
         const compradorNome =
@@ -174,6 +262,8 @@ export async function performDraw(input: DrawInput): Promise<SorteioRecord> {
           numeroId: pick.id,
           compradorNome,
           alunoId: numero.alunoId,
+          alunoNome,
+          numerosBloqueados: blockedNumbers,
           premioPlace: prize.place,
           premioTitle: prize.title,
           premioDescription: prize.description,
@@ -199,6 +289,8 @@ export async function performDraw(input: DrawInput): Promise<SorteioRecord> {
           numeroId: pick.id,
           compradorNome,
           alunoId: numero.alunoId,
+          alunoNome,
+          numerosBloqueados: blockedNumbers,
           premioPlace: prize.place,
           premioTitle: prize.title,
           premioDescription: prize.description,
@@ -212,6 +304,15 @@ export async function performDraw(input: DrawInput): Promise<SorteioRecord> {
       });
     } catch (error) {
       lastError = error;
+      if (error instanceof StaleDrawError) {
+        for (const doc of numerosSnap.docs) {
+          const data = doc.data() as NumeroDoc;
+          if (doc.id === pick.id || (error.alunoId && data.alunoId === error.alunoId)) {
+            skipped.add(doc.id);
+          }
+        }
+        continue;
+      }
       if (error instanceof RaffleError && error.code === "conflict") {
         skipped.add(pick.id);
         continue;
@@ -240,6 +341,8 @@ export async function resetSorteios() {
     db.collection(SORTEIOS).get(),
     db.collection("numeros").where("sorteado", "==", true).get(),
   ]);
+  // Um aluno sai da roleta quando algum número dele fica `sorteado`.
+  // Limpar essa marca devolve o aluno e todos os números dele, sem mexer em vendas.
 
   const now = FieldValue.serverTimestamp();
   await commitChunks([

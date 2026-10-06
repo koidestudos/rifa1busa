@@ -34,9 +34,11 @@ rules_version = '2';
 // Document ID: auto
 // Fields:
 //   - numero, numeroId, compradorNome (name at draw time), alunoId
+//   - alunoNome, numerosBloqueados (owner and that owner's real numbers at draw time)
 //   - premioPlace, premioTitle, premioDescription
 //   - soldOnly, modoTeste, createdBy, createdAt, createdAtMs
-// Draw history only. Resetting clears this and sorteado; never sales/registros.
+// Drawing one number eliminates its alunoId. Every numero with that alunoId
+// leaves the wheel until reset clears `sorteado`. Sales/registros stay.
 //
 // Collection: sorteio_meta
 // Document ID: "lock" — lastDrawAtMs cooldown to prevent concurrent draws.
@@ -148,7 +150,7 @@ service cloud.firestore {
 
     function isValidSorteio(data) {
       return data.keys().hasOnly([
-          'numero', 'numeroId', 'compradorNome', 'alunoId',
+          'numero', 'numeroId', 'compradorNome', 'alunoId', 'alunoNome', 'numerosBloqueados',
           'premioPlace', 'premioTitle', 'premioDescription',
           'soldOnly', 'modoTeste', 'createdBy', 'createdByNome',
           'createdAt', 'createdAtMs'
@@ -156,6 +158,9 @@ service cloud.firestore {
         data.numero is int && data.numero >= 1 && data.numero <= 435 &&
         data.numeroId is string && data.compradorNome is string &&
         data.alunoId is string &&
+        data.alunoNome is string && data.alunoNome.size() <= 80 &&
+        data.numerosBloqueados is list &&
+        data.numerosBloqueados.size() >= 1 && data.numerosBloqueados.size() <= 435 &&
         data.premioPlace is int && data.premioPlace >= 1 && data.premioPlace <= 5 &&
         data.soldOnly is bool && data.modoTeste is bool &&
         data.createdBy is string && data.createdAt is timestamp &&

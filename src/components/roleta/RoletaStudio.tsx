@@ -12,6 +12,7 @@ import { cn } from "@/lib/cn";
 import {
   easeOutQuint,
   eligibleRoletaNumbers,
+  roletaEliminationStats,
   extraSpinsForDuration,
   isLightRoletaBackground,
   prizeMeta,
@@ -65,6 +66,7 @@ export function RoletaStudio({
     () => eligibleRoletaNumbers(orderedNumbers, settings.soldOnly),
     [orderedNumbers, settings.soldOnly],
   );
+  const elimination = useMemo(() => roletaEliminationStats(orderedNumbers), [orderedNumbers]);
 
   useEffect(() => {
     rotationRef.current = rotation;
@@ -374,6 +376,13 @@ export function RoletaStudio({
             <span className="mx-2">·</span>
             {eligible.length} número(s) na roleta
           </p>
+          <p className="text-center text-[11px] font-black uppercase tracking-[0.12em] opacity-80 sm:text-xs">
+            Alunos eliminados: {elimination.alunosEliminados}
+            <span className="mx-2">·</span>
+            Números bloqueados: {elimination.numerosBloqueados}
+            <span className="mx-2">·</span>
+            Números disponíveis: {elimination.numerosDisponiveis}
+          </p>
 
           <button
             type="button"
@@ -439,7 +448,7 @@ export function RoletaStudio({
       <ConfirmDialog
         open={confirm === "clear"}
         title="⚠️ Apagar histórico?"
-        description="Isso removerá os registros dos sorteios realizados. Os números sorteados continuam marcados e não voltam para a roleta."
+        description="Isso removerá os registros dos sorteios realizados. Os números já sorteados e os demais números dos alunos eliminados continuam fora da roleta."
         confirmLabel="Apagar"
         cancelLabel="Cancelar"
         danger
@@ -450,7 +459,7 @@ export function RoletaStudio({
       <ConfirmDialog
         open={confirm === "reset1"}
         title="⚠️ Resetar sorteios?"
-        description="Todos os resultados dos sorteios serão apagados e os números sorteados poderão ser sorteados novamente. Os dados das vendas NÃO serão apagados."
+        description="O histórico será apagado e os alunos eliminados voltam para a roleta, com todos os números deles. Vendas, compradores, comprovantes e alunos permanecem."
         confirmLabel="Continuar"
         cancelLabel="Cancelar"
         danger
@@ -461,7 +470,7 @@ export function RoletaStudio({
       <ConfirmDialog
         open={confirm === "reset2"}
         title="Confirmar reset"
-        description="Última confirmação: histórico apagado, marcação SORTEADO removida, vendas e alunos intactos."
+        description="Última confirmação: histórico apagado, alunos eliminados liberados, vendas e alunos intactos."
         confirmLabel="Resetar"
         cancelLabel="Cancelar"
         danger

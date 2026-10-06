@@ -48,12 +48,59 @@ export function roletaBackground(id: RoletaBackgroundId) {
   return ROLETA_BACKGROUNDS.find((item) => item.id === id) ?? ROLETA_BACKGROUNDS[1];
 }
 
+export function eliminatedOwnerIds(numbers: Array<{ ownerId: string; drawn: boolean }>) {
+  const ids = new Set<string>();
+  for (const number of numbers) {
+    if (number.drawn && number.ownerId) ids.add(number.ownerId);
+  }
+  return ids;
+}
+
+export function isOwnerBlocked(ownerId: string, drawn: boolean, eliminated: ReadonlySet<string>) {
+  return drawn || Boolean(ownerId && eliminated.has(ownerId));
+}
+
 export function eligibleRoletaNumbers(numbers: RoletaNumber[], soldOnly: boolean) {
   return numbers.filter((item) => {
-    if (item.sorteado) return false;
+    if (item.bloqueado || item.sorteado) return false;
     if (soldOnly) return item.status === "PEGO" && Boolean(item.comprador_nome);
     return true;
   });
+}
+
+export function roletaEliminationStats(numbers: RoletaNumber[]) {
+  const bloqueados = numbers.filter((item) => item.bloqueado).length;
+  const alunos = new Set(
+    numbers.filter((item) => item.bloqueado && item.aluno_id).map((item) => item.aluno_id),
+  );
+  return {
+    alunosEliminados: alunos.size,
+    numerosBloqueados: bloqueados,
+    numerosDisponiveis: Math.max(0, numbers.length - bloqueados),
+  };
+}
+
+export function formatBlockedRanges(values: number[]) {
+  const sorted = [...new Set(values.filter((value) => Number.isInteger(value)))].sort(
+    (a, b) => a - b,
+  );
+  if (sorted.length === 0) return "—";
+
+  const parts: string[] = [];
+  let start = sorted[0]!;
+  let prev = sorted[0]!;
+  for (let index = 1; index < sorted.length; index += 1) {
+    const current = sorted[index]!;
+    if (current === prev + 1) {
+      prev = current;
+      continue;
+    }
+    parts.push(start === prev ? String(start) : `${start}–${prev}`);
+    start = current;
+    prev = current;
+  }
+  parts.push(start === prev ? String(start) : `${start}–${prev}`);
+  return parts.join(", ");
 }
 
 export function prizeMeta(place: number) {
